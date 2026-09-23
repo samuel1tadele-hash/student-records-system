@@ -36,33 +36,26 @@ tailwind.config = {
   ::-webkit-scrollbar-thumb { background: #1e2025; border-radius: 5px; border: 2px solid #08090a; }
   ::-webkit-scrollbar-thumb:hover { background: #26282f; }
   ::selection { background: #5b8def; color: #08090a; }
-
   .surface { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 60%), #0d0e10; border: 1px solid rgba(255,255,255,0.07); }
   .surface-hover:hover { border-color: rgba(255,255,255,0.14); }
-  .grid-backdrop {
-    background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
-    background-size: 64px 64px;
-  }
+  .grid-backdrop { background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 64px 64px; }
   input, select, textarea { color-scheme: dark; }
   input:focus, select:focus, textarea:focus { outline: 2px solid rgba(91,141,239,0.5); outline-offset: 0; border-color: #5b8def; }
-
   .nav-item { transition: all .2s; border-left: 2px solid transparent; }
   .nav-item:hover { background: rgba(255,255,255,0.03); color: #f7f8f8; }
   .nav-item.active { background: rgba(91,141,239,0.10); color: #7ba1f5; border-left-color: #5b8def; }
-
   @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .toast { animation: toastIn .25s ease; }
   @keyframes modalIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
   .modal-panel { animation: modalIn .2s ease; }
-
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  .running { animation: pulse 1.4s ease-in-out infinite; }
   table { border-collapse: separate; border-spacing: 0; }
   th { font-weight: 500; }
 </style>
 </head>
 <body>
 
-<!-- ============ LOADING ============ -->
 <div id="loading" class="fixed inset-0 flex items-center justify-center bg-bg-950 z-50">
   <div class="text-center">
     <div class="w-10 h-10 border-2 border-white/10 border-t-accent rounded-full animate-spin mx-auto"></div>
@@ -70,7 +63,6 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- ============ LOGIN SCREEN ============ -->
 <div id="loginScreen" class="hidden fixed inset-0 grid-backdrop items-center justify-center p-6 z-40">
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
@@ -122,10 +114,8 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- ============ APP SHELL ============ -->
 <div id="app" class="hidden min-h-screen">
 
-  <!-- Sidebar -->
   <aside class="fixed top-0 left-0 bottom-0 w-60 bg-bg-900 border-r border-white/[0.06] flex flex-col z-30">
     <div class="h-14 flex items-center px-5 border-b border-white/[0.06]">
       <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center flex-shrink-0">
@@ -140,18 +130,13 @@ tailwind.config = {
       </div>
     </div>
 
-    <nav id="nav" class="flex-1 py-3 space-y-0.5">
-      <!-- Populated by JS -->
-    </nav>
+    <nav id="nav" class="flex-1 py-3 space-y-0.5"></nav>
 
     <div class="p-3 border-t border-white/[0.06]">
-      <div id="userCard" class="surface rounded-lg p-3">
-        <!-- Populated by JS -->
-      </div>
+      <div id="userCard" class="surface rounded-lg p-3"></div>
     </div>
   </aside>
 
-  <!-- Main area -->
   <div class="ml-60">
     <header class="h-14 border-b border-white/[0.06] bg-bg-950/70 backdrop-blur-xl sticky top-0 z-20">
       <div class="h-full px-6 flex items-center justify-between">
@@ -169,10 +154,7 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- Modal root -->
 <div id="modalRoot" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm items-center justify-center p-4"></div>
-
-<!-- Toast root -->
 <div id="toastRoot" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
 
 <script>
@@ -180,14 +162,6 @@ tailwind.config = {
    SRMS — Student Records Management System
    A single-file web app demonstrating real SQL (SQLite via WebAssembly)
    running entirely in the browser.
-   
-   Architecture:
-   - DB:      Database layer — schema, seed, query helpers, persistence
-   - Auth:    Login + role-based permissions
-   - UI:      Toast, modal, escape, format helpers
-   - Views:   One object per screen (dashboard, students, courses, ...)
-   - Router:  Simple hash-less view switching
-   - App:     Init sequence + event wiring
    ============================================================================ */
 
 /* ============================================================================
@@ -195,8 +169,8 @@ tailwind.config = {
    ============================================================================ */
 
 const DB = {
-  sql: null,       // SQL.js module
-  db: null,        // SQLite database instance
+  sql: null,
+  db: null,
   STORAGE_KEY: 'srms_db_v1',
 
   async init() {
@@ -209,9 +183,11 @@ const DB = {
       try {
         const bytes = Uint8Array.from(JSON.parse(saved));
         this.db = new this.sql.Database(bytes);
-        // Verify it's a real DB (not corrupt)
-        this.db.exec('SELECT COUNT(*) FROM students');
-        return;
+        // Verify DB is intact AND has users
+        const userCount = this.db.exec('SELECT COUNT(*) FROM users')[0].values[0][0];
+        if (userCount > 0) return;
+        console.warn('Saved DB has no users — reseeding.');
+        localStorage.removeItem(this.STORAGE_KEY);
       } catch (e) {
         console.warn('Saved DB was invalid, reseeding.', e);
         localStorage.removeItem(this.STORAGE_KEY);
@@ -219,12 +195,11 @@ const DB = {
     }
 
     this.db = new this.sql.Database();
-    this.seed();
+    await this.seed();
     this.save();
   },
 
-  /* Create tables + insert seed data */
-  seed() {
+  async seed() {
     this.db.run(`
       PRAGMA foreign_keys = ON;
 
@@ -293,7 +268,7 @@ const DB = {
       CREATE INDEX idx_attendance_enrollment ON attendance(enrollment_id);
     `);
 
-    // ---- Departments
+    // Departments
     const departments = [
       ['CS', 'Computer Science'],
       ['IT', 'Information Technology'],
@@ -302,7 +277,7 @@ const DB = {
     ];
     departments.forEach(d => this.db.run('INSERT INTO departments (code, name) VALUES (?, ?)', d));
 
-    // ---- Students (realistic Ethiopian TVET names)
+    // Students
     const students = [
       ['STU-2024-001', 'Abebe',    'Bekele',     'abebe.bekele@student.edu',     '+251911000001', 1, 2, '2024-09-01'],
       ['STU-2024-002', 'Sara',     'Tadesse',    'sara.tadesse@student.edu',     '+251911000002', 2, 2, '2024-09-01'],
@@ -320,7 +295,7 @@ const DB = {
       s
     ));
 
-    // ---- Courses
+    // Courses
     const courses = [
       ['WDD-101', 'Web Design Fundamentals',          1, 3, '2024-Fall'],
       ['WDD-102', 'HTML5 & CSS3',                     1, 3, '2024-Fall'],
@@ -336,8 +311,7 @@ const DB = {
       c
     ));
 
-    // ---- Enrollments (student_id, course_id, grade)
-    // grade NULL means "enrolled but not yet graded"
+    // Enrollments
     const grades = [
       [1, 1, 92], [1, 2, 88], [1, 3, 85],
       [2, 1, 78], [2, 2, 82], [2, 3, 75], [2, 4, 80],
@@ -357,7 +331,7 @@ const DB = {
       );
     });
 
-    // ---- Attendance (sample records for first enrollment of each student)
+    // Attendance
     const today = new Date();
     const dates = [];
     for (let i = 0; i < 6; i++) {
@@ -366,7 +340,6 @@ const DB = {
       dates.push(d.toISOString().slice(0, 10));
     }
     const statuses = ['present', 'present', 'late', 'present', 'absent', 'present'];
-    this.db.exec('SELECT id FROM enrollments').forEach(() => {});
     const enrollIds = [];
     const res = this.db.exec('SELECT id FROM enrollments ORDER BY id');
     if (res[0]) res[0].values.forEach(v => enrollIds.push(v[0]));
@@ -380,19 +353,19 @@ const DB = {
       });
     });
 
-    // ---- Users (password_hash = SHA-256 of username + password)
+    // Users — MUST await sequentially so they exist before save()
     const users = [
       ['admin',   'admin',   'admin123',  'admin',   'Administrator'],
       ['teacher', 'teacher', 'teach123',  'teacher', 'Instructor'],
       ['viewer',  'viewer',  'view123',   'viewer',  'Read-only Guest'],
     ];
-    users.forEach(async u => {
+    for (const u of users) {
       const hash = await Auth.hash(u[2], u[0]);
       this.db.run(
         'INSERT INTO users (username, password_hash, role, display_name) VALUES (?,?,?,?)',
         [u[0], hash, u[3], u[4]]
       );
-    });
+    }
   },
 
   letterGrade(g) {
@@ -404,7 +377,6 @@ const DB = {
     return 'F';
   },
 
-  /* Run a SELECT and return array of row objects */
   all(sql, params = []) {
     const stmt = this.db.prepare(sql);
     stmt.bind(params);
@@ -414,19 +386,16 @@ const DB = {
     return rows;
   },
 
-  /* Run a SELECT and return first row or null */
   one(sql, params = []) {
     const rows = this.all(sql, params);
     return rows[0] || null;
   },
 
-  /* Run an INSERT/UPDATE/DELETE */
   run(sql, params = []) {
     this.db.run(sql, params);
     this.save();
   },
 
-  /* Get the id of the last inserted row */
   lastId() {
     return this.db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   },
@@ -439,11 +408,9 @@ const DB = {
   reset() {
     localStorage.removeItem(this.STORAGE_KEY);
     this.db = new this.sql.Database();
-    this.seed();
-    this.save();
+    return this.seed().then(() => this.save());
   },
 
-  /* For SQL console: run any statement, return array of result sets */
   exec(sql) {
     return this.db.exec(sql);
   }
@@ -524,7 +491,6 @@ const UI = {
     }, 3200);
   },
 
-  /* Generic modal — pass HTML for body + optional footer buttons */
   modal({ title, body, footer, onMount, wide }) {
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
@@ -606,7 +572,7 @@ const UI = {
 };
 
 /* ============================================================================
-   NAVIGATION DEFINITION
+   NAVIGATION
    ============================================================================ */
 
 const NAV = [
@@ -624,7 +590,6 @@ const NAV = [
 
 const Views = {
 
-  /* ---------------- Dashboard ---------------- */
   dashboard() {
     const stats = {
       students: DB.one("SELECT COUNT(*) c FROM students WHERE status='active'").c,
@@ -749,7 +714,6 @@ const Views = {
     `;
   },
 
-  /* ---------------- Students ---------------- */
   students() {
     const search = this._studentsSearch || '';
     const deptFilter = this._studentsDept || 'all';
@@ -856,7 +820,6 @@ const Views = {
     `;
   },
 
-  /* ---------------- Courses ---------------- */
   courses() {
     const courses = DB.all(`
       SELECT c.*, d.name AS dept_name, d.code AS dept_code,
@@ -909,7 +872,6 @@ const Views = {
     `;
   },
 
-  /* ---------------- Enrollments ---------------- */
   enrollments() {
     const enrollments = DB.all(`
       SELECT e.*,
@@ -989,7 +951,6 @@ const Views = {
     `;
   },
 
-  /* ---------------- Attendance ---------------- */
   attendance() {
     const selectedCourseId = this._attCourse || (DB.one('SELECT id FROM courses ORDER BY code')?.id);
     const selectedDate = this._attDate || new Date().toISOString().slice(0, 10);
@@ -997,7 +958,6 @@ const Views = {
 
     if (!selectedCourseId) return UI.empty('No courses available', 'Add a course first from the Courses page.');
 
-    const course = DB.one('SELECT * FROM courses WHERE id = ?', [selectedCourseId]);
     const roster = DB.all(`
       SELECT e.id AS enrollment_id,
              s.student_id, s.first_name, s.last_name,
@@ -1098,7 +1058,6 @@ const Views = {
     `;
   },
 
-  /* ---------------- Reports ---------------- */
   reports() {
     const tab = this._reportsTab || 'transcript';
     const students = DB.all('SELECT id, student_id, first_name, last_name FROM students ORDER BY last_name');
@@ -1248,7 +1207,6 @@ const Views = {
         `;
       }
     } else {
-      // SQL Console
       const sql = this._sqlInput || '';
       let result = this._sqlResult;
       content = `
@@ -1296,7 +1254,6 @@ const Views = {
       `;
     }
 
-    // Render reports view
     return `
       <div class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight">Reports</h1>
@@ -1346,7 +1303,6 @@ const App = {
   currentView: 'dashboard',
 
   render() {
-    // Sidebar nav
     document.getElementById('nav').innerHTML = NAV.map(item => `
       <a href="#" data-view="${item.id}" class="nav-item flex items-center gap-3 px-5 py-2.5 text-[13px] text-stone-400 ${this.currentView === item.id ? 'active' : ''}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
@@ -1354,7 +1310,6 @@ const App = {
       </a>
     `).join('');
 
-    // User card
     const user = Auth.current;
     document.getElementById('userCard').innerHTML = `
       <div class="flex items-center gap-2.5">
@@ -1372,15 +1327,12 @@ const App = {
       </div>
     `;
 
-    // Breadcrumb
     const current = NAV.find(n => n.id === this.currentView);
     document.getElementById('breadcrumb').textContent = current ? current.label : '';
 
-    // Main content
     const main = document.getElementById('main');
     main.innerHTML = Views[this.currentView] ? Views[this.currentView]() : UI.empty('Not found');
 
-    // Rebind events
     this.bind();
   },
 
@@ -1391,12 +1343,10 @@ const App = {
   },
 
   bind() {
-    // Nav
     document.querySelectorAll('[data-view]').forEach(el => {
       el.addEventListener('click', e => { e.preventDefault(); this.navigate(el.dataset.view); });
     });
 
-    // Logout
     document.getElementById('logoutBtn')?.addEventListener('click', () => {
       Auth.logout();
       document.getElementById('app').classList.add('hidden');
@@ -1404,7 +1354,6 @@ const App = {
       document.getElementById('loginScreen').classList.add('flex');
     });
 
-    // Students search + filter
     document.getElementById('studentSearch')?.addEventListener('input', e => {
       Views._studentsSearch = e.target.value;
       clearTimeout(this._searchTimer);
@@ -1415,7 +1364,6 @@ const App = {
       this.render();
     });
 
-    // New student
     document.getElementById('newStudentBtn')?.addEventListener('click', () => this.studentForm());
     document.querySelectorAll('[data-edit-student]').forEach(el => {
       el.addEventListener('click', () => this.studentForm(parseInt(el.dataset.editStudent, 10)));
@@ -1432,7 +1380,6 @@ const App = {
       });
     });
 
-    // Courses
     document.getElementById('newCourseBtn')?.addEventListener('click', () => this.courseForm());
     document.querySelectorAll('[data-edit-course]').forEach(el => {
       el.addEventListener('click', () => this.courseForm(parseInt(el.dataset.editCourse, 10)));
@@ -1449,7 +1396,6 @@ const App = {
       });
     });
 
-    // Enrollments
     document.getElementById('newEnrollBtn')?.addEventListener('click', () => this.enrollmentForm());
     document.querySelectorAll('[data-grade-enroll]').forEach(el => {
       el.addEventListener('click', () => this.gradeForm(parseInt(el.dataset.gradeEnroll, 10)));
@@ -1465,7 +1411,6 @@ const App = {
       });
     });
 
-    // Attendance
     document.getElementById('attCourseSelect')?.addEventListener('change', e => {
       Views._attCourse = parseInt(e.target.value, 10);
       this.render();
@@ -1487,7 +1432,6 @@ const App = {
       });
     });
 
-    // Reports
     document.querySelectorAll('[data-reports-tab]').forEach(el => {
       el.addEventListener('click', () => {
         Views._reportsTab = el.dataset.reportsTab;
@@ -1522,7 +1466,6 @@ const App = {
     });
   },
 
-  /* ---------------- Student form ---------------- */
   studentForm(id) {
     const editing = id !== undefined;
     const s = editing ? DB.one('SELECT * FROM students WHERE id = ?', [id]) : null;
@@ -1618,7 +1561,6 @@ const App = {
     });
   },
 
-  /* ---------------- Course form ---------------- */
   courseForm(id) {
     const editing = id !== undefined;
     const c = editing ? DB.one('SELECT * FROM courses WHERE id = ?', [id]) : null;
@@ -1694,7 +1636,6 @@ const App = {
     });
   },
 
-  /* ---------------- Enrollment form ---------------- */
   enrollmentForm() {
     const students = DB.all('SELECT id, student_id, first_name, last_name FROM students WHERE status = "active" ORDER BY last_name');
     const courses = DB.all('SELECT id, code, title FROM courses ORDER BY code');
@@ -1742,7 +1683,6 @@ const App = {
     });
   },
 
-  /* ---------------- Grade form ---------------- */
   gradeForm(id) {
     const e = DB.one(`
       SELECT e.*, s.first_name, s.last_name, c.code, c.title
@@ -1798,7 +1738,6 @@ const App = {
   try {
     await DB.init();
 
-    // Login handlers
     document.querySelectorAll('[data-fill]').forEach(btn => {
       btn.addEventListener('click', () => {
         const [u, p] = btn.dataset.fill.split(':');
@@ -1828,17 +1767,16 @@ const App = {
       UI.toast(`Signed in as ${Auth.current.name}`, 'success');
     });
 
-    // Reset database button
     document.getElementById('resetDbBtn').addEventListener('click', () => {
       if (!Auth.can('db.reset')) { UI.toast('Only administrators can reset the database', 'error'); return; }
       UI.confirm('Reset the database? All changes will be lost and seed data will be restored.', () => {
-        DB.reset();
-        UI.toast('Database reset to seed data', 'success');
-        App.render();
+        DB.reset().then(() => {
+          UI.toast('Database reset to seed data', 'success');
+          App.render();
+        });
       });
     });
 
-    // Show login
     document.getElementById('loading').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('loginScreen').classList.add('flex');
