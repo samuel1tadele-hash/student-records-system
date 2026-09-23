@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SRMS — Student Records Management System</title>
-<meta name="description" content="A web-based student records management system with real SQL database running in the browser.">
+<meta name="description" content="A web-based student records management system with real SQL running in the browser.">
 <meta name="author" content="Samuel Tadele Refera">
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -14,8 +14,14 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        bg: { 950: '#08090a', 900: '#0d0e10', 850: '#121316', 800: '#17181c', 700: '#1e2025', 600: '#26282f' },
-        accent: { DEFAULT: '#5b8def', soft: '#7ba1f5' }
+        bg: { DEFAULT: '#f5f7fa', soft: '#eef1f6' },
+        surface: { DEFAULT: '#ffffff', soft: '#fafbfc' },
+        line: { DEFAULT: '#e4e7ec', strong: '#d0d5dd' },
+        ink: { DEFAULT: '#101828', soft: '#475467', muted: '#98a2b3', light: '#c4c9d4' },
+        primary: { DEFAULT: '#4f46e5', dark: '#4338ca', soft: '#eef2ff', light: '#818cf8' },
+        success: { DEFAULT: '#10b981', soft: '#ecfdf5', dark: '#059669' },
+        warning: { DEFAULT: '#f59e0b', soft: '#fffbeb', dark: '#d97706' },
+        danger:  { DEFAULT: '#ef4444', soft: '#fef2f2', dark: '#dc2626' }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -25,124 +31,275 @@ tailwind.config = {
   }
 }
 </script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
-  body { background: #08090a; color: #f7f8f8; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.011em; }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: #08090a; }
-  ::-webkit-scrollbar-thumb { background: #1e2025; border-radius: 5px; border: 2px solid #08090a; }
-  ::-webkit-scrollbar-thumb:hover { background: #26282f; }
-  ::selection { background: #5b8def; color: #08090a; }
-  .surface { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 60%), #0d0e10; border: 1px solid rgba(255,255,255,0.07); }
-  .surface-hover:hover { border-color: rgba(255,255,255,0.14); }
-  .grid-backdrop { background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 64px 64px; }
-  input, select, textarea { color-scheme: dark; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(91,141,239,0.5); outline-offset: 0; border-color: #5b8def; }
-  .nav-item { transition: all .2s; border-left: 2px solid transparent; }
-  .nav-item:hover { background: rgba(255,255,255,0.03); color: #f7f8f8; }
-  .nav-item.active { background: rgba(91,141,239,0.10); color: #7ba1f5; border-left-color: #5b8def; }
-  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .toast { animation: toastIn .25s ease; }
-  @keyframes modalIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
-  .modal-panel { animation: modalIn .2s ease; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-  .running { animation: pulse 1.4s ease-in-out infinite; }
-  table { border-collapse: separate; border-spacing: 0; }
+  :root { color-scheme: light; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #f5f7fa;
+    color: #101828;
+    font-family: 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  ::selection { background: #4f46e5; color: #ffffff; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    background: #ffffff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .card-hover:hover {
+    border-color: #d0d5dd;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);
+  }
+
+  /* ---------- Nav items ---------- */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #475467;
+    transition: all .15s ease;
+  }
+  .nav-item:hover {
+    background: #f5f7fa;
+    color: #101828;
+  }
+  .nav-item.active {
+    background: #eef2ff;
+    color: #4338ca;
+    font-weight: 600;
+  }
+  .nav-item.active svg { color: #4f46e5; }
+
+  /* ---------- Focus ring ---------- */
+  :focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* ---------- Inputs ---------- */
+  .input {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    color: #101828;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .input::placeholder { color: #98a2b3; }
+  .input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 9px 16px;
+    border-radius: 8px;
+    transition: all .15s ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: #4f46e5;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.05);
+  }
+  .btn-primary:hover { background: #4338ca; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: #ffffff;
+    color: #344054;
+    border-color: #d0d5dd;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  }
+  .btn-secondary:hover { background: #f9fafb; border-color: #98a2b3; }
+
+  .btn-danger {
+    background: #ef4444;
+    color: #ffffff;
+  }
+  .btn-danger:hover { background: #dc2626; }
+
+  .btn-ghost {
+    background: transparent;
+    color: #475467;
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background: #f5f7fa; color: #101828; }
+
+  /* ---------- Table ---------- */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; }
   th { font-weight: 500; }
+
+  /* ---------- Modal ---------- */
+  .modal { display: none; }
+  .modal.is-open { display: flex; }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .modal-panel { animation: modalIn .2s ease; }
+
+  /* ---------- Toast ---------- */
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .toast { animation: toastIn .25s ease; }
+
+  /* ---------- Scrollbar ---------- */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #f5f7fa; }
+  ::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 5px; border: 2px solid #f5f7fa; }
+  ::-webkit-scrollbar-thumb:hover { background: #98a2b3; }
+
+  /* ---------- Status pill ---------- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 6px;
+    line-height: 1.5;
+  }
+  .pill-success { background: #ecfdf5; color: #059669; }
+  .pill-warning { background: #fffbeb; color: #d97706; }
+  .pill-danger  { background: #fef2f2; color: #dc2626; }
+  .pill-primary { background: #eef2ff; color: #4338ca; }
+  .pill-neutral { background: #f2f4f7; color: #475467; }
+
+  /* ---------- Login screen background ---------- */
+  .login-bg {
+    background:
+      radial-gradient(ellipse 60% 60% at 15% 10%, rgba(79,70,229,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 60% at 85% 90%, rgba(16,185,129,0.08) 0%, transparent 55%),
+      #f5f7fa;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
 
-<div id="loading" class="fixed inset-0 flex items-center justify-center bg-bg-950 z-50">
+<!-- Loading -->
+<div id="loading" class="fixed inset-0 flex items-center justify-center bg-bg z-50">
   <div class="text-center">
-    <div class="w-10 h-10 border-2 border-white/10 border-t-accent rounded-full animate-spin mx-auto"></div>
-    <p class="mt-4 text-sm text-stone-500 font-mono">Initializing SQL engine…</p>
+    <div class="w-10 h-10 border-2 border-line border-t-primary rounded-full animate-spin mx-auto"></div>
+    <p class="mt-4 text-sm text-ink-muted font-mono">Initializing SQL engine…</p>
   </div>
 </div>
 
-<div id="loginScreen" class="hidden fixed inset-0 grid-backdrop items-center justify-center p-6 z-40">
+<!-- Login -->
+<div id="loginScreen" class="hidden fixed inset-0 login-bg items-center justify-center p-6 z-40">
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center mx-auto mb-5">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#08090a" stroke-width="2" stroke-linecap="round">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center mx-auto mb-5 shadow-lg shadow-primary/20">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round">
           <ellipse cx="12" cy="6" rx="8" ry="3"/>
           <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
           <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-semibold tracking-tight">Student Records System</h1>
-      <p class="text-sm text-stone-500 mt-2">Sign in to continue</p>
+      <h1 class="text-2xl font-bold tracking-tight text-ink">Student Records System</h1>
+      <p class="text-sm text-ink-soft mt-2">Sign in to continue</p>
     </div>
 
-    <form id="loginForm" class="surface rounded-2xl p-7 space-y-5">
+    <form id="loginForm" class="card p-7 space-y-4 shadow-sm">
       <div>
-        <label class="block text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-2">Username</label>
-        <input id="loginUser" type="text" required autocomplete="username"
-          class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-stone-100 outline-none transition-colors">
+        <label class="block text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-2">Username</label>
+        <input id="loginUser" type="text" required autocomplete="username" class="input">
       </div>
       <div>
-        <label class="block text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-2">Password</label>
-        <input id="loginPass" type="password" required autocomplete="current-password"
-          class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-stone-100 outline-none transition-colors">
+        <label class="block text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-2">Password</label>
+        <input id="loginPass" type="password" required autocomplete="current-password" class="input">
       </div>
-      <button type="submit" class="w-full bg-white hover:bg-stone-200 text-black font-medium py-2.5 rounded-lg text-sm transition-colors">
+      <button type="submit" class="btn btn-primary w-full !py-3">
         Sign in
       </button>
-      <p id="loginError" class="hidden text-xs text-red-400 text-center"></p>
+      <p id="loginError" class="hidden text-xs text-danger text-center"></p>
     </form>
 
-    <div class="mt-6 surface rounded-xl p-4">
-      <div class="text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-3">Demo accounts</div>
-      <div class="space-y-2 text-xs">
-        <button type="button" data-fill="admin:admin123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
-          <span class="text-stone-300">admin / admin123</span>
-          <span class="text-[10px] font-mono text-amber-400/90 uppercase tracking-wider">Full access</span>
+    <div class="mt-6 card p-4 bg-surface-soft">
+      <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-3">Demo accounts</div>
+      <div class="space-y-1.5">
+        <button type="button" data-fill="admin:admin123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-bg transition-colors text-left">
+          <span class="text-[13px] text-ink-soft font-mono">admin / admin123</span>
+          <span class="pill pill-warning">Admin</span>
         </button>
-        <button type="button" data-fill="teacher:teach123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
-          <span class="text-stone-300">teacher / teach123</span>
-          <span class="text-[10px] font-mono text-accent-soft uppercase tracking-wider">Manage</span>
+        <button type="button" data-fill="teacher:teach123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-bg transition-colors text-left">
+          <span class="text-[13px] text-ink-soft font-mono">teacher / teach123</span>
+          <span class="pill pill-primary">Teacher</span>
         </button>
-        <button type="button" data-fill="viewer:view123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
-          <span class="text-stone-300">viewer / view123</span>
-          <span class="text-[10px] font-mono text-stone-500 uppercase tracking-wider">Read-only</span>
+        <button type="button" data-fill="viewer:view123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-bg transition-colors text-left">
+          <span class="text-[13px] text-ink-soft font-mono">viewer / view123</span>
+          <span class="pill pill-neutral">Viewer</span>
         </button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- App shell -->
 <div id="app" class="hidden min-h-screen">
 
-  <aside class="fixed top-0 left-0 bottom-0 w-60 bg-bg-900 border-r border-white/[0.06] flex flex-col z-30">
-    <div class="h-14 flex items-center px-5 border-b border-white/[0.06]">
-      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center flex-shrink-0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#08090a" stroke-width="2.4" stroke-linecap="round">
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 bottom-0 w-60 bg-surface border-r border-line flex flex-col z-30">
+    <div class="h-16 flex items-center px-5 border-b border-line">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center flex-shrink-0 shadow-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round">
           <ellipse cx="12" cy="6" rx="8" ry="3"/>
           <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
         </svg>
       </div>
       <div class="ml-2.5">
-        <div class="text-[13px] font-semibold leading-tight">SRMS</div>
-        <div class="text-[10px] text-stone-500 font-mono leading-tight">v1.0</div>
+        <div class="text-[14px] font-bold tracking-tight text-ink">SRMS</div>
+        <div class="text-[10px] text-ink-muted font-mono">Student Records</div>
       </div>
     </div>
 
-    <nav id="nav" class="flex-1 py-3 space-y-0.5"></nav>
+    <nav id="nav" class="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto"></nav>
 
-    <div class="p-3 border-t border-white/[0.06]">
-      <div id="userCard" class="surface rounded-lg p-3"></div>
+    <div class="p-3 border-t border-line">
+      <div id="userCard"></div>
     </div>
   </aside>
 
   <div class="ml-60">
-    <header class="h-14 border-b border-white/[0.06] bg-bg-950/70 backdrop-blur-xl sticky top-0 z-20">
+    <header class="h-16 border-b border-line bg-surface/90 backdrop-blur-md sticky top-0 z-20">
       <div class="h-full px-6 flex items-center justify-between">
-        <div id="breadcrumb" class="text-[13px] text-stone-500"></div>
+        <div id="breadcrumb" class="text-[14px] font-medium text-ink"></div>
         <div class="flex items-center gap-3">
-          <button id="resetDbBtn" class="text-[12px] text-stone-500 hover:text-stone-200 transition-colors inline-flex items-center gap-1.5">
+          <button id="resetDbBtn" class="btn btn-ghost !text-[12px] !px-3 !py-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
             Reset database
           </button>
@@ -150,28 +307,23 @@ tailwind.config = {
       </div>
     </header>
 
-    <main id="main" class="p-6 lg:p-8 max-w-7xl"></main>
+    <main id="main" class="p-6 lg:p-8 max-w-[1400px]"></main>
   </div>
 </div>
 
-<div id="modalRoot" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm items-center justify-center p-4"></div>
+<div id="modalRoot" class="modal fixed inset-0 z-40 bg-ink/40 backdrop-blur-sm items-center justify-center p-4"></div>
 <div id="toastRoot" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
 
 <script>
 /* ============================================================================
    SRMS — Student Records Management System
-   A single-file web app demonstrating real SQL (SQLite via WebAssembly)
-   running entirely in the browser.
-   ============================================================================ */
-
-/* ============================================================================
-   DB LAYER
+   Light SaaS-style UI · Real SQL via SQL.js
    ============================================================================ */
 
 const DB = {
   sql: null,
   db: null,
-  STORAGE_KEY: 'srms_db_v1',
+  STORAGE_KEY: 'srms_db_v2',
 
   async init() {
     this.sql = await initSqlJs({
@@ -183,13 +335,12 @@ const DB = {
       try {
         const bytes = Uint8Array.from(JSON.parse(saved));
         this.db = new this.sql.Database(bytes);
-        // Verify DB is intact AND has users
         const userCount = this.db.exec('SELECT COUNT(*) FROM users')[0].values[0][0];
         if (userCount > 0) return;
         console.warn('Saved DB has no users — reseeding.');
         localStorage.removeItem(this.STORAGE_KEY);
       } catch (e) {
-        console.warn('Saved DB was invalid, reseeding.', e);
+        console.warn('Saved DB invalid, reseeding.', e);
         localStorage.removeItem(this.STORAGE_KEY);
       }
     }
@@ -268,7 +419,6 @@ const DB = {
       CREATE INDEX idx_attendance_enrollment ON attendance(enrollment_id);
     `);
 
-    // Departments
     const departments = [
       ['CS', 'Computer Science'],
       ['IT', 'Information Technology'],
@@ -277,7 +427,6 @@ const DB = {
     ];
     departments.forEach(d => this.db.run('INSERT INTO departments (code, name) VALUES (?, ?)', d));
 
-    // Students
     const students = [
       ['STU-2024-001', 'Abebe',    'Bekele',     'abebe.bekele@student.edu',     '+251911000001', 1, 2, '2024-09-01'],
       ['STU-2024-002', 'Sara',     'Tadesse',    'sara.tadesse@student.edu',     '+251911000002', 2, 2, '2024-09-01'],
@@ -291,27 +440,23 @@ const DB = {
       ['STU-2024-010', 'Bereket',  'Solomon',    'bereket.solomon@student.edu',  '+251911000010', 3, 4, '2022-09-01'],
     ];
     students.forEach(s => this.db.run(
-      'INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date) VALUES (?,?,?,?,?,?,?,?)',
-      s
+      'INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date) VALUES (?,?,?,?,?,?,?,?)', s
     ));
 
-    // Courses
     const courses = [
       ['WDD-101', 'Web Design Fundamentals',          1, 3, '2024-Fall'],
       ['WDD-102', 'HTML5 & CSS3',                     1, 3, '2024-Fall'],
       ['WDD-201', 'JavaScript Programming',           1, 4, '2025-Spring'],
       ['WDD-202', 'Database Design & SQL',            1, 4, '2025-Spring'],
       ['WDD-301', 'Server-Side Scripting',            3, 4, '2025-Fall'],
-      ['WDD-302', 'Advanced Database Administration',  1, 4, '2025-Fall'],
+      ['WDD-302', 'Advanced Database Administration', 1, 4, '2025-Fall'],
       ['WDD-401', 'Web Application Security',         3, 3, '2025-Fall'],
       ['WDD-402', 'Capstone Project',                 1, 6, '2025-Fall'],
     ];
     courses.forEach(c => this.db.run(
-      'INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)',
-      c
+      'INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)', c
     ));
 
-    // Enrollments
     const grades = [
       [1, 1, 92], [1, 2, 88], [1, 3, 85],
       [2, 1, 78], [2, 2, 82], [2, 3, 75], [2, 4, 80],
@@ -331,7 +476,6 @@ const DB = {
       );
     });
 
-    // Attendance
     const today = new Date();
     const dates = [];
     for (let i = 0; i < 6; i++) {
@@ -346,14 +490,10 @@ const DB = {
     enrollIds.slice(0, 15).forEach((eid, i) => {
       dates.forEach((date, j) => {
         const status = statuses[(i + j) % statuses.length];
-        this.db.run(
-          'INSERT OR IGNORE INTO attendance (enrollment_id, date, status) VALUES (?,?,?)',
-          [eid, date, status]
-        );
+        this.db.run('INSERT OR IGNORE INTO attendance (enrollment_id, date, status) VALUES (?,?,?)', [eid, date, status]);
       });
     });
 
-    // Users — MUST await sequentially so they exist before save()
     const users = [
       ['admin',   'admin',   'admin123',  'admin',   'Administrator'],
       ['teacher', 'teacher', 'teach123',  'teacher', 'Instructor'],
@@ -385,50 +525,26 @@ const DB = {
     stmt.free();
     return rows;
   },
-
-  one(sql, params = []) {
-    const rows = this.all(sql, params);
-    return rows[0] || null;
-  },
-
-  run(sql, params = []) {
-    this.db.run(sql, params);
-    this.save();
-  },
-
-  lastId() {
-    return this.db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-  },
-
+  one(sql, params = []) { return this.all(sql, params)[0] || null; },
+  run(sql, params = []) { this.db.run(sql, params); this.save(); },
   save() {
-    const data = this.db.export();
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(Array.from(data)));
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(Array.from(this.db.export())));
   },
-
   reset() {
     localStorage.removeItem(this.STORAGE_KEY);
     this.db = new this.sql.Database();
     return this.seed().then(() => this.save());
   },
-
-  exec(sql) {
-    return this.db.exec(sql);
-  }
+  exec(sql) { return this.db.exec(sql); }
 };
-
-/* ============================================================================
-   AUTH LAYER
-   ============================================================================ */
 
 const Auth = {
   current: null,
-
   async hash(password, salt) {
     const data = new TextEncoder().encode(salt + '::' + password);
     const buf = await crypto.subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   },
-
   async login(username, password) {
     const user = DB.one('SELECT * FROM users WHERE username = ?', [username]);
     if (!user) return { ok: false, error: 'User not found' };
@@ -437,14 +553,9 @@ const Auth = {
     this.current = { id: user.id, username: user.username, role: user.role, name: user.display_name };
     return { ok: true };
   },
-
-  logout() {
-    this.current = null;
-  },
-
+  logout() { this.current = null; },
   can(action) {
     if (!this.current) return false;
-    const r = this.current.role;
     const perms = {
       'students.create':  ['admin', 'teacher'],
       'students.edit':    ['admin', 'teacher'],
@@ -458,30 +569,31 @@ const Auth = {
       'attendance.mark':  ['admin', 'teacher'],
       'db.reset':         ['admin'],
     };
-    return (perms[action] || []).includes(r);
+    return (perms[action] || []).includes(this.current.role);
   }
 };
-
-/* ============================================================================
-   UI HELPERS
-   ============================================================================ */
 
 const UI = {
   escape(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   },
-
   toast(message, type = 'info') {
-    const colors = {
-      info:    'border-white/10 text-stone-200',
-      success: 'border-emerald-500/30 text-emerald-300',
-      error:   'border-red-500/30 text-red-300',
-      warn:    'border-amber-500/30 text-amber-300',
+    const tones = {
+      info:    'bg-white border-line text-ink',
+      success: 'bg-success-soft border-success/30 text-success-dark',
+      error:   'bg-danger-soft border-danger/30 text-danger-dark',
+      warn:    'bg-warning-soft border-warning/30 text-warning-dark',
+    };
+    const icons = {
+      info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v4h1"/>',
+      success: '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>',
+      error: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>',
+      warn: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
     };
     const el = document.createElement('div');
-    el.className = `toast surface rounded-lg px-4 py-3 text-sm max-w-xs shadow-xl border ${colors[type]}`;
-    el.textContent = message;
+    el.className = `toast card ${tones[type]} px-4 py-3 text-[13.5px] font-medium max-w-xs shadow-lg flex items-start gap-2.5`;
+    el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5">${icons[type]}</svg><span>${UI.escape(message)}</span>`;
     document.getElementById('toastRoot').appendChild(el);
     setTimeout(() => {
       el.style.transition = 'opacity .3s, transform .3s';
@@ -490,44 +602,37 @@ const UI = {
       setTimeout(() => el.remove(), 300);
     }, 3200);
   },
-
   modal({ title, body, footer, onMount, wide }) {
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
-      <div class="modal-panel surface rounded-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[88vh] overflow-y-auto">
-        <div class="flex items-center justify-between p-5 border-b border-white/[0.06]">
-          <h2 class="text-base font-medium">${UI.escape(title)}</h2>
-          <button data-close aria-label="Close" class="w-8 h-8 rounded-md text-stone-500 hover:text-stone-100 hover:bg-white/[0.05] flex items-center justify-center transition-colors">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" stroke-linecap="round"/></svg>
+      <div class="modal-panel card w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[88vh] overflow-y-auto shadow-xl">
+        <div class="flex items-center justify-between p-5 border-b border-line">
+          <h2 class="text-[15px] font-semibold text-ink">${UI.escape(title)}</h2>
+          <button data-close aria-label="Close" class="w-8 h-8 rounded-md text-ink-muted hover:text-ink hover:bg-bg flex items-center justify-center transition-colors">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8" stroke-linecap="round"/></svg>
           </button>
         </div>
         <div class="p-5">${body}</div>
-        ${footer ? `<div class="p-5 border-t border-white/[0.06] flex justify-end gap-2">${footer}</div>` : ''}
+        ${footer ? `<div class="p-5 border-t border-line bg-surface-soft flex justify-end gap-2">${footer}</div>` : ''}
       </div>
     `;
-    root.classList.remove('hidden');
-    root.classList.add('flex');
-
+    root.classList.add('is-open');
     root.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', UI.closeModal));
     root.addEventListener('mousedown', e => { if (e.target === root) UI.closeModal(); });
-
     if (onMount) onMount(root);
   },
-
   closeModal() {
     const root = document.getElementById('modalRoot');
-    root.classList.add('hidden');
-    root.classList.remove('flex');
+    root.classList.remove('is-open');
     root.innerHTML = '';
   },
-
   confirm(message, onConfirm) {
     UI.modal({
       title: 'Confirm action',
-      body: `<p class="text-sm text-stone-300">${UI.escape(message)}</p>`,
+      body: `<p class="text-[13.5px] text-ink-soft leading-relaxed">${UI.escape(message)}</p>`,
       footer: `
-        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
-        <button id="confirmYes" class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-400 text-white rounded-lg transition-colors">Delete</button>
+        <button data-close class="btn btn-secondary">Cancel</button>
+        <button id="confirmYes" class="btn btn-danger">Delete</button>
       `,
       onMount(root) {
         root.querySelector('#confirmYes').addEventListener('click', () => {
@@ -537,46 +642,43 @@ const UI = {
       }
     });
   },
-
   gradeColor(grade) {
-    if (grade === null || grade === undefined) return 'text-stone-500';
-    if (grade >= 90) return 'text-emerald-400';
-    if (grade >= 80) return 'text-accent-soft';
-    if (grade >= 70) return 'text-stone-300';
-    if (grade >= 60) return 'text-amber-400';
-    return 'text-red-400';
+    if (grade === null || grade === undefined) return 'text-ink-muted';
+    if (grade >= 90) return 'text-success-dark';
+    if (grade >= 80) return 'text-primary-dark';
+    if (grade >= 70) return 'text-ink';
+    if (grade >= 60) return 'text-warning-dark';
+    return 'text-danger-dark';
   },
-
   roleBadge(role) {
-    const map = {
-      admin:   'bg-amber-500/10 text-amber-300 border-amber-500/30',
-      teacher: 'bg-accent/10 text-accent-soft border-accent/30',
-      viewer:  'bg-white/[0.04] text-stone-400 border-white/[0.10]',
-    };
-    return `<span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded border ${map[role]}">${role}</span>`;
+    const map = { admin: 'pill-warning', teacher: 'pill-primary', viewer: 'pill-neutral' };
+    return `<span class="pill ${map[role]}">${role}</span>`;
   },
-
+  statusPill(status) {
+    const map = {
+      active: 'pill-success',
+      graduated: 'pill-primary',
+      suspended: 'pill-danger',
+    };
+    return `<span class="pill ${map[status] || 'pill-neutral'}">${status}</span>`;
+  },
   empty(title, hint) {
     return `
-      <div class="text-center py-16 px-6">
-        <div class="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="text-stone-600">
+      <div class="text-center py-20 px-6">
+        <div class="w-14 h-14 rounded-2xl bg-bg border border-line flex items-center justify-center mx-auto mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="1.6" stroke-linecap="round">
             <circle cx="11" cy="11" r="7"/><path d="M4 20l6-6"/>
           </svg>
         </div>
-        <h3 class="text-sm text-stone-300 font-medium">${UI.escape(title)}</h3>
-        ${hint ? `<p class="text-xs text-stone-500 mt-1.5 max-w-sm mx-auto">${UI.escape(hint)}</p>` : ''}
+        <h3 class="text-[14px] text-ink font-medium mb-1.5">${UI.escape(title)}</h3>
+        ${hint ? `<p class="text-[13px] text-ink-muted max-w-sm mx-auto">${UI.escape(hint)}</p>` : ''}
       </div>
     `;
   }
 };
 
-/* ============================================================================
-   NAVIGATION
-   ============================================================================ */
-
 const NAV = [
-  { id: 'dashboard',   label: 'Dashboard',   icon: '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>' },
+  { id: 'dashboard',   label: 'Dashboard',   icon: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>' },
   { id: 'students',    label: 'Students',    icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>' },
   { id: 'courses',     label: 'Courses',     icon: '<path d="M4 5h16v14H4z"/><path d="M4 9h16"/>' },
   { id: 'enrollments', label: 'Enrollments', icon: '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>' },
@@ -584,12 +686,7 @@ const NAV = [
   { id: 'reports',     label: 'Reports',     icon: '<path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>' },
 ];
 
-/* ============================================================================
-   VIEWS
-   ============================================================================ */
-
 const Views = {
-
   dashboard() {
     const stats = {
       students: DB.one("SELECT COUNT(*) c FROM students WHERE status='active'").c,
@@ -597,76 +694,67 @@ const Views = {
       enrolls:  DB.one("SELECT COUNT(*) c FROM enrollments").c,
       avg:      DB.one("SELECT ROUND(AVG(grade),1) a FROM enrollments WHERE grade IS NOT NULL").a,
     };
-
     const byDept = DB.all(`
       SELECT d.name, COUNT(s.id) AS count
-      FROM departments d
-      LEFT JOIN students s ON s.department_id = d.id
+      FROM departments d LEFT JOIN students s ON s.department_id = d.id
       GROUP BY d.id ORDER BY count DESC
     `);
-
     const recent = DB.all(`
-      SELECT s.first_name || ' ' || s.last_name AS name,
-             c.code AS course,
-             e.grade, e.letter_grade
+      SELECT s.first_name || ' ' || s.last_name AS name, c.code AS course, e.grade, e.letter_grade
       FROM enrollments e
       JOIN students s ON e.student_id = s.id
-      JOIN courses c  ON e.course_id = c.id
+      JOIN courses c ON e.course_id = c.id
       ORDER BY e.id DESC LIMIT 6
     `);
-
     const maxDept = Math.max(...byDept.map(d => d.count), 1);
     const topEnroll = DB.all(`
       SELECT c.code, c.title, COUNT(e.id) AS count
-      FROM courses c
-      LEFT JOIN enrollments e ON e.course_id = c.id
+      FROM courses c LEFT JOIN enrollments e ON e.course_id = c.id
       GROUP BY c.id ORDER BY count DESC LIMIT 4
     `);
 
     return `
-      <div class="flex items-end justify-between mb-8">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p class="text-sm text-stone-500 mt-1">Overview of student records and academic activity</p>
-        </div>
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">Dashboard</h1>
+        <p class="text-[13.5px] text-ink-soft mt-1">Overview of student records and academic activity</p>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        ${this._statCard('Active students', stats.students, 'from-accent/10')}
-        ${this._statCard('Courses offered', stats.courses, 'from-emerald-500/10')}
-        ${this._statCard('Enrollments', stats.enrolls, 'from-amber-500/10')}
-        ${this._statCard('Average grade', stats.avg ?? '—', 'from-purple-500/10')}
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        ${this._stat('Active students', stats.students, 'primary', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>')}
+        ${this._stat('Courses offered', stats.courses, 'success', '<path d="M4 5h16v14H4z"/><path d="M4 9h16"/>')}
+        ${this._stat('Enrollments', stats.enrolls, 'warning', '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>')}
+        ${this._stat('Average grade', stats.avg ?? '—', 'primary', '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>')}
       </div>
 
-      <div class="grid lg:grid-cols-2 gap-4">
-        <div class="surface rounded-xl p-6">
-          <h2 class="text-sm font-medium text-stone-200 mb-5">Students by department</h2>
-          <div class="space-y-3">
+      <div class="grid lg:grid-cols-2 gap-4 mb-4">
+        <div class="card p-6">
+          <h2 class="text-[13.5px] font-semibold text-ink mb-5">Students by department</h2>
+          <div class="space-y-3.5">
             ${byDept.map(d => `
               <div>
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="text-stone-400">${UI.escape(d.name)}</span>
-                  <span class="text-stone-500 font-mono">${d.count}</span>
+                <div class="flex justify-between text-[12.5px] mb-2">
+                  <span class="text-ink-soft">${UI.escape(d.name)}</span>
+                  <span class="text-ink font-medium tabular-nums">${d.count}</span>
                 </div>
-                <div class="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-accent to-[#8b7cff] rounded-full" style="width:${(d.count/maxDept)*100}%"></div>
+                <div class="h-1.5 bg-bg rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-primary to-primary-light rounded-full" style="width:${(d.count/maxDept)*100}%"></div>
                 </div>
               </div>
             `).join('')}
           </div>
         </div>
 
-        <div class="surface rounded-xl p-6">
-          <h2 class="text-sm font-medium text-stone-200 mb-5">Top courses by enrollment</h2>
-          <div class="space-y-4">
+        <div class="card p-6">
+          <h2 class="text-[13.5px] font-semibold text-ink mb-5">Top courses by enrollment</h2>
+          <div class="space-y-3">
             ${topEnroll.map(c => `
-              <div class="flex items-start gap-3">
-                <div class="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-[10px] font-mono text-stone-400 flex-shrink-0">
+              <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-bg transition-colors">
+                <div class="w-9 h-9 rounded-lg bg-primary-soft text-primary-dark flex items-center justify-center text-[13px] font-semibold tabular-nums shrink-0">
                   ${c.count}
                 </div>
                 <div class="min-w-0">
-                  <div class="text-[13px] text-stone-200 font-medium">${UI.escape(c.title)}</div>
-                  <div class="text-[11px] text-stone-500 font-mono">${UI.escape(c.code)}</div>
+                  <div class="text-[13px] text-ink font-medium truncate">${UI.escape(c.title)}</div>
+                  <div class="text-[11px] text-ink-muted font-mono">${UI.escape(c.code)}</div>
                 </div>
               </div>
             `).join('')}
@@ -674,25 +762,25 @@ const Views = {
         </div>
       </div>
 
-      <div class="surface rounded-xl mt-4 overflow-hidden">
-        <div class="p-6 border-b border-white/[0.06]">
-          <h2 class="text-sm font-medium text-stone-200">Recent enrollment activity</h2>
+      <div class="card overflow-hidden">
+        <div class="p-6 border-b border-line">
+          <h2 class="text-[13.5px] font-semibold text-ink">Recent enrollment activity</h2>
         </div>
-        <table class="w-full text-sm">
-          <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-            <tr class="border-b border-white/[0.06]">
-              <th class="text-left px-6 py-3 font-normal">Student</th>
-              <th class="text-left px-6 py-3 font-normal">Course</th>
-              <th class="text-right px-6 py-3 font-normal">Grade</th>
+        <table class="w-full text-[13.5px]">
+          <thead class="bg-surface-soft text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+            <tr class="border-b border-line">
+              <th class="text-left px-6 py-3">Student</th>
+              <th class="text-left px-6 py-3">Course</th>
+              <th class="text-right px-6 py-3">Grade</th>
             </tr>
           </thead>
           <tbody>
             ${recent.map(r => `
-              <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
-                <td class="px-6 py-3 text-stone-200">${UI.escape(r.name)}</td>
-                <td class="px-6 py-3 text-stone-400 font-mono text-xs">${UI.escape(r.course)}</td>
-                <td class="px-6 py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
-                  ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">Pending</span>'}
+              <tr class="border-b border-line last:border-0 hover:bg-bg/50 transition-colors">
+                <td class="px-6 py-3.5 text-ink">${UI.escape(r.name)}</td>
+                <td class="px-6 py-3.5 text-ink-soft font-mono text-[12px]">${UI.escape(r.course)}</td>
+                <td class="px-6 py-3.5 text-right font-mono text-[12px] font-medium ${UI.gradeColor(r.grade)}">
+                  ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-ink-muted">Pending</span>'}
                 </td>
               </tr>
             `).join('')}
@@ -702,14 +790,22 @@ const Views = {
     `;
   },
 
-  _statCard(label, value, gradient) {
+  _stat(label, value, color, iconPath) {
+    const colors = {
+      primary: { bg: 'bg-primary-soft', text: 'text-primary-dark' },
+      success: { bg: 'bg-success-soft', text: 'text-success-dark' },
+      warning: { bg: 'bg-warning-soft', text: 'text-warning-dark' }
+    };
+    const c = colors[color];
     return `
-      <div class="surface surface-hover rounded-xl p-5 relative overflow-hidden transition-colors">
-        <div class="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-gradient-to-br ${gradient} to-transparent blur-2xl"></div>
-        <div class="relative">
-          <div class="text-[11px] font-mono uppercase tracking-wider text-stone-500">${UI.escape(label)}</div>
-          <div class="text-3xl font-semibold text-stone-50 mt-3 tracking-tight">${value}</div>
+      <div class="card card-hover p-5">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[11px] font-mono uppercase tracking-wider text-ink-muted">${UI.escape(label)}</span>
+          <div class="w-8 h-8 rounded-lg ${c.bg} ${c.text} flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>
+          </div>
         </div>
+        <div class="text-3xl font-bold text-ink tracking-tight tabular-nums">${value}</div>
       </div>
     `;
   },
@@ -730,83 +826,82 @@ const Views = {
 
     const students = DB.all(`
       SELECT s.*, d.name AS dept_name, d.code AS dept_code
-      FROM students s
-      JOIN departments d ON s.department_id = d.id
-      ${whereSql}
-      ORDER BY s.last_name, s.first_name
+      FROM students s JOIN departments d ON s.department_id = d.id
+      ${whereSql} ORDER BY s.last_name, s.first_name
     `, params);
 
     const departments = DB.all('SELECT * FROM departments ORDER BY name');
     const canCreate = Auth.can('students.create');
 
     return `
-      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+      <div class="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Students</h1>
-          <p class="text-sm text-stone-500 mt-1">${students.length} ${students.length === 1 ? 'record' : 'records'}</p>
+          <h1 class="text-2xl font-bold tracking-tight text-ink">Students</h1>
+          <p class="text-[13.5px] text-ink-soft mt-1">${students.length} ${students.length === 1 ? 'record' : 'records'}</p>
         </div>
         ${canCreate ? `
-          <button id="newStudentBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <button id="newStudentBtn" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             New student
           </button>
         ` : ''}
       </div>
 
-      <div class="surface rounded-xl mb-4 p-4 flex flex-wrap gap-3">
-        <div class="flex-1 min-w-[200px] relative">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">
+      <div class="card p-4 mb-4 flex flex-wrap gap-3">
+        <div class="flex-1 min-w-[220px] relative">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="1.8" class="absolute left-3 top-1/2 -translate-y-1/2">
             <circle cx="11" cy="11" r="7"/><path d="M4 20l6-6"/>
           </svg>
           <input id="studentSearch" type="text" placeholder="Search by name, ID, or email…" value="${UI.escape(search)}"
-            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg pl-9 pr-3 py-2 text-sm text-stone-100 placeholder-stone-600 outline-none transition-colors">
+            class="input !pl-9">
         </div>
-        <select id="studentDept" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none transition-colors">
+        <select id="studentDept" class="input !w-auto">
           <option value="all" ${deptFilter === 'all' ? 'selected' : ''}>All departments</option>
           ${departments.map(d => `<option value="${d.id}" ${deptFilter == d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
         </select>
       </div>
 
-      ${students.length === 0 ? UI.empty('No students found', 'Try clearing your search or filters.') : `
-        <div class="surface rounded-xl overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-              <tr class="border-b border-white/[0.06]">
-                <th class="text-left px-6 py-3 font-normal">Student ID</th>
-                <th class="text-left px-6 py-3 font-normal">Name</th>
-                <th class="text-left px-6 py-3 font-normal">Department</th>
-                <th class="text-left px-6 py-3 font-normal">Year</th>
-                <th class="text-left px-6 py-3 font-normal">Status</th>
-                <th class="text-right px-6 py-3 font-normal">Actions</th>
+      ${students.length === 0 ? `<div class="card">${UI.empty('No students found', 'Try clearing your search or filters.')}</div>` : `
+        <div class="card overflow-hidden">
+          <table class="text-[13.5px]">
+            <thead class="bg-surface-soft text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+              <tr class="border-b border-line">
+                <th class="text-left px-6 py-3">Student</th>
+                <th class="text-left px-6 py-3">Department</th>
+                <th class="text-left px-6 py-3">Year</th>
+                <th class="text-left px-6 py-3">Status</th>
+                <th class="text-right px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               ${students.map(s => `
-                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
-                  <td class="px-6 py-3 font-mono text-xs text-stone-400">${UI.escape(s.student_id)}</td>
-                  <td class="px-6 py-3">
-                    <div class="text-stone-100">${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</div>
-                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(s.email)}</div>
+                <tr class="border-b border-line last:border-0 hover:bg-bg/50 transition-colors">
+                  <td class="px-6 py-3.5">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-primary-soft text-primary-dark flex items-center justify-center text-[11px] font-semibold shrink-0">
+                        ${UI.escape(s.first_name[0])}${UI.escape(s.last_name[0])}
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-ink font-medium">${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</div>
+                        <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(s.student_id)} · ${UI.escape(s.email)}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td class="px-6 py-3 text-stone-400 text-xs">${UI.escape(s.dept_name)}</td>
-                  <td class="px-6 py-3 text-stone-300 font-mono text-xs">Y${s.year}</td>
-                  <td class="px-6 py-3">
-                    <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded ${
-                      s.status === 'active' ? 'bg-emerald-500/10 text-emerald-300' :
-                      s.status === 'graduated' ? 'bg-accent/10 text-accent-soft' :
-                      'bg-red-500/10 text-red-300'
-                    }">${s.status}</span>
+                  <td class="px-6 py-3.5 text-ink-soft">${UI.escape(s.dept_name)}</td>
+                  <td class="px-6 py-3.5">
+                    <span class="pill pill-neutral">Year ${s.year}</span>
                   </td>
-                  <td class="px-6 py-3 text-right">
+                  <td class="px-6 py-3.5">${UI.statusPill(s.status)}</td>
+                  <td class="px-6 py-3.5 text-right">
                     <div class="inline-flex gap-1">
                       ${Auth.can('students.edit') ? `
-                        <button data-edit-student="${s.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-stone-100 hover:bg-white/[0.06] flex items-center justify-center transition-colors" title="Edit">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>
+                        <button data-edit-student="${s.id}" class="w-8 h-8 rounded-md text-ink-muted hover:text-primary hover:bg-primary-soft flex items-center justify-center transition-colors" title="Edit">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>
                         </button>
                       ` : ''}
                       ${Auth.can('students.delete') ? `
-                        <button data-del-student="${s.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors" title="Delete">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                        <button data-del-student="${s.id}" class="w-8 h-8 rounded-md text-ink-muted hover:text-danger hover:bg-danger-soft flex items-center justify-center transition-colors" title="Delete">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                         </button>
                       ` : ''}
                     </div>
@@ -822,47 +917,46 @@ const Views = {
 
   courses() {
     const courses = DB.all(`
-      SELECT c.*, d.name AS dept_name, d.code AS dept_code,
+      SELECT c.*, d.name AS dept_name,
              (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) AS enrolled
-      FROM courses c
-      JOIN departments d ON c.department_id = d.id
+      FROM courses c JOIN departments d ON c.department_id = d.id
       ORDER BY c.code
     `);
     const canCreate = Auth.can('courses.create');
 
     return `
-      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+      <div class="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Courses</h1>
-          <p class="text-sm text-stone-500 mt-1">${courses.length} ${courses.length === 1 ? 'course' : 'courses'} offered</p>
+          <h1 class="text-2xl font-bold tracking-tight text-ink">Courses</h1>
+          <p class="text-[13.5px] text-ink-soft mt-1">${courses.length} ${courses.length === 1 ? 'course' : 'courses'} offered</p>
         </div>
         ${canCreate ? `
-          <button id="newCourseBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <button id="newCourseBtn" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             New course
           </button>
         ` : ''}
       </div>
 
-      ${courses.length === 0 ? UI.empty('No courses yet') : `
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+      ${courses.length === 0 ? `<div class="card">${UI.empty('No courses yet')}</div>` : `
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           ${courses.map(c => `
-            <div class="surface surface-hover rounded-xl p-5 transition-colors">
+            <div class="card card-hover p-5">
               <div class="flex items-start justify-between gap-3 mb-4">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-accent-soft px-2 py-0.5 rounded border border-accent/25 bg-accent/[0.08]">${UI.escape(c.code)}</span>
-                <span class="text-[11px] text-stone-500 font-mono">${c.credits} cr</span>
+                <span class="pill pill-primary font-mono">${UI.escape(c.code)}</span>
+                <span class="text-[11px] text-ink-muted font-mono">${c.credits} credits</span>
               </div>
-              <h3 class="text-stone-50 font-medium text-[15px] leading-snug mb-3">${UI.escape(c.title)}</h3>
-              <div class="text-[11px] text-stone-500 space-y-1">
+              <h3 class="text-ink font-semibold text-[15px] leading-snug mb-3">${UI.escape(c.title)}</h3>
+              <div class="text-[12px] text-ink-soft space-y-1">
                 <div>${UI.escape(c.dept_name)}</div>
-                <div class="font-mono">${UI.escape(c.semester)} · ${c.enrolled} enrolled</div>
+                <div class="font-mono text-ink-muted">${UI.escape(c.semester)} · ${c.enrolled} enrolled</div>
               </div>
-              <div class="flex gap-1 mt-4 pt-4 border-t border-white/[0.05]">
+              <div class="flex gap-1 mt-4 pt-4 border-t border-line">
                 ${Auth.can('courses.edit') ? `
-                  <button data-edit-course="${c.id}" class="flex-1 text-[11px] text-stone-400 hover:text-stone-100 py-1.5 rounded-md hover:bg-white/[0.04] transition-colors">Edit</button>
+                  <button data-edit-course="${c.id}" class="btn btn-ghost flex-1 !text-[12px] !py-1.5">Edit</button>
                 ` : ''}
                 ${Auth.can('courses.delete') ? `
-                  <button data-del-course="${c.id}" class="flex-1 text-[11px] text-stone-400 hover:text-red-400 py-1.5 rounded-md hover:bg-red-500/10 transition-colors">Delete</button>
+                  <button data-del-course="${c.id}" class="btn btn-ghost flex-1 !text-[12px] !py-1.5 hover:!bg-danger-soft hover:!text-danger-dark">Delete</button>
                 ` : ''}
               </div>
             </div>
@@ -880,7 +974,7 @@ const Views = {
              c.code AS course_code, c.title AS course_title, c.credits
       FROM enrollments e
       JOIN students s ON e.student_id = s.id
-      JOIN courses  c ON e.course_id = c.id
+      JOIN courses c ON e.course_id = c.id
       ORDER BY e.id DESC
     `);
     const canCreate = Auth.can('enrollments.create');
@@ -888,56 +982,58 @@ const Views = {
     const canDelete = Auth.can('enrollments.delete');
 
     return `
-      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+      <div class="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Enrollments</h1>
-          <p class="text-sm text-stone-500 mt-1">${enrollments.length} active · grades on the right</p>
+          <h1 class="text-2xl font-bold tracking-tight text-ink">Enrollments</h1>
+          <p class="text-[13.5px] text-ink-soft mt-1">${enrollments.length} active records</p>
         </div>
         ${canCreate ? `
-          <button id="newEnrollBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <button id="newEnrollBtn" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Enroll student
           </button>
         ` : ''}
       </div>
 
-      ${enrollments.length === 0 ? UI.empty('No enrollments yet') : `
-        <div class="surface rounded-xl overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-              <tr class="border-b border-white/[0.06]">
-                <th class="text-left px-6 py-3 font-normal">Student</th>
-                <th class="text-left px-6 py-3 font-normal">Course</th>
-                <th class="text-left px-6 py-3 font-normal">Credits</th>
-                <th class="text-left px-6 py-3 font-normal">Grade</th>
-                <th class="text-right px-6 py-3 font-normal">Actions</th>
+      ${enrollments.length === 0 ? `<div class="card">${UI.empty('No enrollments yet')}</div>` : `
+        <div class="card overflow-hidden">
+          <table class="text-[13.5px]">
+            <thead class="bg-surface-soft text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+              <tr class="border-b border-line">
+                <th class="text-left px-6 py-3">Student</th>
+                <th class="text-left px-6 py-3">Course</th>
+                <th class="text-left px-6 py-3">Credits</th>
+                <th class="text-left px-6 py-3">Grade</th>
+                <th class="text-right px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               ${enrollments.map(e => `
-                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
-                  <td class="px-6 py-3">
-                    <div class="text-stone-100">${UI.escape(e.student_name)}</div>
-                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(e.sid_code)}</div>
+                <tr class="border-b border-line last:border-0 hover:bg-bg/50 transition-colors">
+                  <td class="px-6 py-3.5">
+                    <div class="text-ink font-medium">${UI.escape(e.student_name)}</div>
+                    <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(e.sid_code)}</div>
                   </td>
-                  <td class="px-6 py-3">
-                    <div class="text-stone-200 text-[13px]">${UI.escape(e.course_title)}</div>
-                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(e.course_code)}</div>
+                  <td class="px-6 py-3.5">
+                    <div class="text-ink-soft text-[13px]">${UI.escape(e.course_title)}</div>
+                    <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(e.course_code)}</div>
                   </td>
-                  <td class="px-6 py-3 text-stone-400 font-mono text-xs">${e.credits}</td>
-                  <td class="px-6 py-3">
-                    <span class="font-mono text-xs ${UI.gradeColor(e.grade)}">
-                      ${e.grade !== null ? `${e.grade} · ${e.letter_grade}` : '<span class="text-stone-600">Not graded</span>'}
+                  <td class="px-6 py-3.5">
+                    <span class="pill pill-neutral font-mono">${e.credits}</span>
+                  </td>
+                  <td class="px-6 py-3.5">
+                    <span class="font-mono text-[12.5px] font-medium ${UI.gradeColor(e.grade)}">
+                      ${e.grade !== null ? `${e.grade} · ${e.letter_grade}` : '<span class="text-ink-muted">Not graded</span>'}
                     </span>
                   </td>
-                  <td class="px-6 py-3 text-right">
+                  <td class="px-6 py-3.5 text-right">
                     <div class="inline-flex gap-1">
                       ${canGrade ? `
-                        <button data-grade-enroll="${e.id}" class="text-[11px] text-stone-400 hover:text-accent-soft px-2.5 py-1 rounded-md hover:bg-accent/[0.08] transition-colors">Grade</button>
+                        <button data-grade-enroll="${e.id}" class="btn btn-ghost !text-[12px] !px-3 !py-1.5 hover:!bg-primary-soft hover:!text-primary-dark">Grade</button>
                       ` : ''}
                       ${canDelete ? `
-                        <button data-del-enroll="${e.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors" title="Remove">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                        <button data-del-enroll="${e.id}" class="w-8 h-8 rounded-md text-ink-muted hover:text-danger hover:bg-danger-soft flex items-center justify-center transition-colors" title="Remove">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                         </button>
                       ` : ''}
                     </div>
@@ -956,12 +1052,10 @@ const Views = {
     const selectedDate = this._attDate || new Date().toISOString().slice(0, 10);
     const courses = DB.all('SELECT id, code, title FROM courses ORDER BY code');
 
-    if (!selectedCourseId) return UI.empty('No courses available', 'Add a course first from the Courses page.');
+    if (!selectedCourseId) return `<div class="card">${UI.empty('No courses available', 'Add a course first from the Courses page.')}</div>`;
 
     const roster = DB.all(`
-      SELECT e.id AS enrollment_id,
-             s.student_id, s.first_name, s.last_name,
-             a.status AS att_status
+      SELECT e.id AS enrollment_id, s.student_id, s.first_name, s.last_name, a.status AS att_status
       FROM enrollments e
       JOIN students s ON e.student_id = s.id
       LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.date = ?
@@ -970,75 +1064,66 @@ const Views = {
     `, [selectedDate, selectedCourseId]);
 
     const canMark = Auth.can('attendance.mark');
-
     const counts = { present: 0, absent: 0, late: 0, excused: 0 };
     roster.forEach(r => { if (r.att_status) counts[r.att_status]++; });
 
     return `
-      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Attendance</h1>
-          <p class="text-sm text-stone-500 mt-1">Mark and track daily attendance per course</p>
-        </div>
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">Attendance</h1>
+        <p class="text-[13.5px] text-ink-soft mt-1">Mark and track daily attendance per course</p>
       </div>
 
-      <div class="surface rounded-xl p-4 mb-4 grid sm:grid-cols-2 gap-3">
+      <div class="card p-4 mb-4 grid sm:grid-cols-2 gap-3">
         <div>
-          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course</label>
-          <select id="attCourseSelect" class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          <label class="block text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-2">Course</label>
+          <select id="attCourseSelect" class="input">
             ${courses.map(c => `<option value="${c.id}" ${c.id == selectedCourseId ? 'selected' : ''}>${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
           </select>
         </div>
         <div>
-          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Date</label>
-          <input id="attDateInput" type="date" value="${selectedDate}"
-            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          <label class="block text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-2">Date</label>
+          <input id="attDateInput" type="date" value="${selectedDate}" class="input">
         </div>
       </div>
 
-      <div class="grid grid-cols-4 gap-3 mb-4">
-        ${this._attStat('Present', counts.present, 'text-emerald-400')}
-        ${this._attStat('Absent',  counts.absent,  'text-red-400')}
-        ${this._attStat('Late',    counts.late,    'text-amber-400')}
-        ${this._attStat('Excused', counts.excused, 'text-stone-400')}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        ${this._attStat('Present', counts.present, 'success')}
+        ${this._attStat('Absent',  counts.absent,  'danger')}
+        ${this._attStat('Late',    counts.late,    'warning')}
+        ${this._attStat('Excused', counts.excused, 'neutral')}
       </div>
 
-      ${roster.length === 0 ? UI.empty('No students enrolled', 'Enroll students in this course first.') : `
-        <div class="surface rounded-xl overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-              <tr class="border-b border-white/[0.06]">
-                <th class="text-left px-6 py-3 font-normal">Student</th>
-                <th class="text-left px-6 py-3 font-normal">Status</th>
-                <th class="text-right px-6 py-3 font-normal">Mark</th>
+      ${roster.length === 0 ? `<div class="card">${UI.empty('No students enrolled', 'Enroll students in this course first.')}</div>` : `
+        <div class="card overflow-hidden">
+          <table class="text-[13.5px]">
+            <thead class="bg-surface-soft text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+              <tr class="border-b border-line">
+                <th class="text-left px-6 py-3">Student</th>
+                <th class="text-left px-6 py-3">Status</th>
+                <th class="text-right px-6 py-3">Mark</th>
               </tr>
             </thead>
             <tbody>
               ${roster.map(r => `
-                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
-                  <td class="px-6 py-3">
-                    <div class="text-stone-100">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
-                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.student_id)}</div>
+                <tr class="border-b border-line last:border-0 hover:bg-bg/50 transition-colors">
+                  <td class="px-6 py-3.5">
+                    <div class="text-ink font-medium">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
+                    <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(r.student_id)}</div>
                   </td>
-                  <td class="px-6 py-3">
+                  <td class="px-6 py-3.5">
                     ${r.att_status
-                      ? `<span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded ${
-                          r.att_status === 'present' ? 'bg-emerald-500/10 text-emerald-300' :
-                          r.att_status === 'absent'  ? 'bg-red-500/10 text-red-300' :
-                          r.att_status === 'late'    ? 'bg-amber-500/10 text-amber-300' :
-                          'bg-white/[0.04] text-stone-400'
-                        }">${r.att_status}</span>`
-                      : '<span class="text-[11px] text-stone-600">Not marked</span>'}
+                      ? `<span class="pill pill-${r.att_status === 'present' ? 'success' : r.att_status === 'absent' ? 'danger' : r.att_status === 'late' ? 'warning' : 'neutral'} capitalize">${r.att_status}</span>`
+                      : '<span class="text-[12px] text-ink-muted">Not marked</span>'}
                   </td>
-                  <td class="px-6 py-3 text-right">
+                  <td class="px-6 py-3.5 text-right">
                     ${canMark ? `
                       <div class="inline-flex gap-1">
-                        <button data-att="${r.enrollment_id}|present" class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors">Present</button>
-                        <button data-att="${r.enrollment_id}|absent"  class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">Absent</button>
-                        <button data-att="${r.enrollment_id}|late"    class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors">Late</button>
-                        <button data-att="${r.enrollment_id}|excused" class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-stone-100 hover:bg-white/[0.05] transition-colors">Excused</button>
+                        <button data-att="${r.enrollment_id}|present" class="btn btn-ghost !text-[12px] !px-3 !py-1.5 hover:!bg-success-soft hover:!text-success-dark">Present</button>
+                        <button data-att="${r.enrollment_id}|absent"  class="btn btn-ghost !text-[12px] !px-3 !py-1.5 hover:!bg-danger-soft hover:!text-danger-dark">Absent</button>
+                        <button data-att="${r.enrollment_id}|late"    class="btn btn-ghost !text-[12px] !px-3 !py-1.5 hover:!bg-warning-soft hover:!text-warning-dark">Late</button>
+                        <button data-att="${r.enrollment_id}|excused" class="btn btn-ghost !text-[12px] !px-3 !py-1.5">Excused</button>
                       </div>
-                    ` : '<span class="text-[11px] text-stone-600">Read only</span>'}
+                    ` : '<span class="text-[12px] text-ink-muted">Read only</span>'}
                   </td>
                 </tr>
               `).join('')}
@@ -1050,10 +1135,16 @@ const Views = {
   },
 
   _attStat(label, value, color) {
+    const colors = {
+      success: 'text-success-dark',
+      danger: 'text-danger-dark',
+      warning: 'text-warning-dark',
+      neutral: 'text-ink-soft'
+    };
     return `
-      <div class="surface rounded-xl p-4">
-        <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">${label}</div>
-        <div class="text-2xl font-semibold mt-2 tracking-tight ${color}">${value}</div>
+      <div class="card p-4">
+        <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">${label}</div>
+        <div class="text-2xl font-bold mt-2 tracking-tight tabular-nums ${colors[color]}">${value}</div>
       </div>
     `;
   },
@@ -1070,69 +1161,66 @@ const Views = {
       if (sid) {
         const student = DB.one(`
           SELECT s.*, d.name AS dept_name FROM students s
-          JOIN departments d ON s.department_id = d.id
-          WHERE s.id = ?`, [sid]);
-
+          JOIN departments d ON s.department_id = d.id WHERE s.id = ?
+        `, [sid]);
         const rows = DB.all(`
           SELECT c.code, c.title, c.credits, e.grade, e.letter_grade
-          FROM enrollments e
-          JOIN courses c ON e.course_id = c.id
-          WHERE e.student_id = ?
-          ORDER BY c.code`, [sid]);
-
+          FROM enrollments e JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = ? ORDER BY c.code
+        `, [sid]);
         const gpa = DB.one(`
           SELECT ROUND(SUM(c.credits * CASE
             WHEN e.grade >= 90 THEN 4.0 WHEN e.grade >= 80 THEN 3.0
             WHEN e.grade >= 70 THEN 2.0 WHEN e.grade >= 60 THEN 1.0
             ELSE 0.0 END) / NULLIF(SUM(c.credits), 0), 2) AS gpa,
             SUM(c.credits) AS credits, COUNT(*) AS courses
-          FROM enrollments e
-          JOIN courses c ON e.course_id = c.id
-          WHERE e.student_id = ? AND e.grade IS NOT NULL`, [sid]);
+          FROM enrollments e JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = ? AND e.grade IS NOT NULL
+        `, [sid]);
 
         content = `
-          <div class="flex items-center gap-4 mb-6">
-            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center text-black font-semibold text-lg flex-shrink-0">
+          <div class="flex items-center gap-4 mb-6 pb-6 border-b border-line">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-semibold text-lg shrink-0">
               ${UI.escape(student.first_name[0] + student.last_name[0])}
             </div>
-            <div>
-              <h3 class="text-lg font-medium">${UI.escape(student.first_name)} ${UI.escape(student.last_name)}</h3>
-              <p class="text-xs text-stone-500 font-mono">${UI.escape(student.student_id)} · ${UI.escape(student.dept_name)} · Year ${student.year}</p>
+            <div class="flex-1">
+              <h3 class="text-[16px] font-semibold text-ink">${UI.escape(student.first_name)} ${UI.escape(student.last_name)}</h3>
+              <p class="text-[12px] text-ink-muted font-mono mt-0.5">${UI.escape(student.student_id)} · ${UI.escape(student.dept_name)} · Year ${student.year}</p>
             </div>
-            <div class="ml-auto text-right">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Cumulative GPA</div>
-              <div class="text-2xl font-semibold text-accent-soft tracking-tight">${gpa.gpa ?? '—'}</div>
+            <div class="text-right">
+              <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">Cumulative GPA</div>
+              <div class="text-2xl font-bold text-primary-dark tracking-tight tabular-nums">${gpa.gpa ?? '—'}</div>
             </div>
           </div>
 
           ${rows.length === 0 ? UI.empty('No enrollments', 'This student is not enrolled in any course.') : `
-            <table class="w-full text-sm">
-              <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-                <tr class="border-b border-white/[0.06]">
-                  <th class="text-left py-3 font-normal">Course</th>
-                  <th class="text-right py-3 font-normal">Credits</th>
-                  <th class="text-right py-3 font-normal">Grade</th>
+            <table class="text-[13.5px]">
+              <thead class="text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+                <tr class="border-b border-line">
+                  <th class="text-left py-3">Course</th>
+                  <th class="text-right py-3">Credits</th>
+                  <th class="text-right py-3">Grade</th>
                 </tr>
               </thead>
               <tbody>
                 ${rows.map(r => `
-                  <tr class="border-b border-white/[0.04] last:border-0">
-                    <td class="py-3">
-                      <div class="text-stone-200 text-[13px]">${UI.escape(r.title)}</div>
-                      <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.code)}</div>
+                  <tr class="border-b border-line last:border-0">
+                    <td class="py-3.5">
+                      <div class="text-ink text-[13px] font-medium">${UI.escape(r.title)}</div>
+                      <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(r.code)}</div>
                     </td>
-                    <td class="py-3 text-right text-stone-400 font-mono text-xs">${r.credits}</td>
-                    <td class="py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
-                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">—</span>'}
+                    <td class="py-3.5 text-right text-ink-soft font-mono text-[12px] tabular-nums">${r.credits}</td>
+                    <td class="py-3.5 text-right font-mono text-[12px] font-medium ${UI.gradeColor(r.grade)}">
+                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-ink-muted">—</span>'}
                     </td>
                   </tr>
                 `).join('')}
               </tbody>
-              <tfoot class="border-t border-white/[0.08]">
+              <tfoot class="border-t-2 border-line">
                 <tr>
-                  <td class="py-3 text-stone-400 text-xs uppercase tracking-wider font-mono">Total</td>
-                  <td class="py-3 text-right text-stone-300 font-mono text-xs">${gpa.credits ?? 0} cr</td>
-                  <td class="py-3 text-right text-stone-300 font-mono text-xs">${gpa.courses ?? 0} courses</td>
+                  <td class="py-3 text-ink-muted text-[11px] uppercase tracking-wider font-mono">Total</td>
+                  <td class="py-3 text-right text-ink font-mono text-[12px] font-medium tabular-nums">${gpa.credits ?? 0} cr</td>
+                  <td class="py-3 text-right text-ink font-mono text-[12px] font-medium tabular-nums">${gpa.courses ?? 0} courses</td>
                 </tr>
               </tfoot>
             </table>
@@ -1145,59 +1233,58 @@ const Views = {
         const course = DB.one('SELECT * FROM courses WHERE id = ?', [cid]);
         const rows = DB.all(`
           SELECT s.student_id, s.first_name, s.last_name, e.grade, e.letter_grade
-          FROM enrollments e
-          JOIN students s ON e.student_id = s.id
-          WHERE e.course_id = ?
-          ORDER BY s.last_name`, [cid]);
-
+          FROM enrollments e JOIN students s ON e.student_id = s.id
+          WHERE e.course_id = ? ORDER BY s.last_name
+        `, [cid]);
         const stats = DB.one(`
           SELECT ROUND(AVG(grade),1) avg, MIN(grade) min, MAX(grade) max
-          FROM enrollments WHERE course_id = ? AND grade IS NOT NULL`, [cid]);
+          FROM enrollments WHERE course_id = ? AND grade IS NOT NULL
+        `, [cid]);
 
         content = `
-          <div class="flex items-end justify-between mb-6">
+          <div class="flex items-end justify-between mb-6 pb-6 border-b border-line">
             <div>
-              <h3 class="text-lg font-medium">${UI.escape(course.title)}</h3>
-              <p class="text-xs text-stone-500 font-mono mt-1">${UI.escape(course.code)} · ${course.credits} credits · ${course.semester}</p>
+              <h3 class="text-[16px] font-semibold text-ink">${UI.escape(course.title)}</h3>
+              <p class="text-[12px] text-ink-muted font-mono mt-1">${UI.escape(course.code)} · ${course.credits} credits · ${course.semester}</p>
             </div>
             <div class="text-right">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Class average</div>
-              <div class="text-2xl font-semibold text-accent-soft tracking-tight">${stats.avg ?? '—'}</div>
+              <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">Class average</div>
+              <div class="text-2xl font-bold text-primary-dark tracking-tight tabular-nums">${stats.avg ?? '—'}</div>
             </div>
           </div>
 
           <div class="grid grid-cols-3 gap-3 mb-6">
-            <div class="surface rounded-lg p-4">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Enrolled</div>
-              <div class="text-xl font-semibold mt-2">${rows.length}</div>
+            <div class="card p-4">
+              <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">Enrolled</div>
+              <div class="text-xl font-bold mt-2 tabular-nums">${rows.length}</div>
             </div>
-            <div class="surface rounded-lg p-4">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Highest</div>
-              <div class="text-xl font-semibold mt-2 text-emerald-400">${stats.max ?? '—'}</div>
+            <div class="card p-4">
+              <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">Highest</div>
+              <div class="text-xl font-bold mt-2 text-success-dark tabular-nums">${stats.max ?? '—'}</div>
             </div>
-            <div class="surface rounded-lg p-4">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Lowest</div>
-              <div class="text-xl font-semibold mt-2 text-amber-400">${stats.min ?? '—'}</div>
+            <div class="card p-4">
+              <div class="text-[11px] font-mono uppercase tracking-widest text-ink-muted">Lowest</div>
+              <div class="text-xl font-bold mt-2 text-warning-dark tabular-nums">${stats.min ?? '—'}</div>
             </div>
           </div>
 
           ${rows.length === 0 ? UI.empty('No enrollments') : `
-            <table class="w-full text-sm">
-              <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
-                <tr class="border-b border-white/[0.06]">
-                  <th class="text-left py-3 font-normal">Student</th>
-                  <th class="text-right py-3 font-normal">Grade</th>
+            <table class="text-[13.5px]">
+              <thead class="text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+                <tr class="border-b border-line">
+                  <th class="text-left py-3">Student</th>
+                  <th class="text-right py-3">Grade</th>
                 </tr>
               </thead>
               <tbody>
                 ${rows.map(r => `
-                  <tr class="border-b border-white/[0.04] last:border-0">
-                    <td class="py-3">
-                      <div class="text-stone-200 text-[13px]">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
-                      <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.student_id)}</div>
+                  <tr class="border-b border-line last:border-0">
+                    <td class="py-3.5">
+                      <div class="text-ink text-[13px] font-medium">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
+                      <div class="text-[11.5px] text-ink-muted font-mono">${UI.escape(r.student_id)}</div>
                     </td>
-                    <td class="py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
-                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">—</span>'}
+                    <td class="py-3.5 text-right font-mono text-[12px] font-medium ${UI.gradeColor(r.grade)}">
+                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-ink-muted">—</span>'}
                     </td>
                   </tr>
                 `).join('')}
@@ -1208,45 +1295,45 @@ const Views = {
       }
     } else {
       const sql = this._sqlInput || '';
-      let result = this._sqlResult;
+      const result = this._sqlResult;
       content = `
         <div class="mb-4">
-          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Run SQL against the live database</label>
+          <label class="block text-[11px] font-mono uppercase tracking-widest text-ink-muted mb-2">Run SQL against the live database</label>
           <textarea id="sqlConsole" rows="4" spellcheck="false" placeholder="SELECT * FROM students LIMIT 10;"
-            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-3 text-[13px] text-stone-100 font-mono outline-none resize-y">${UI.escape(sql)}</textarea>
-          <div class="flex items-center gap-2 mt-3">
-            <button id="sqlRun" class="bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-[13px] transition-colors">Run query</button>
-            <span class="text-[11px] text-stone-500 font-mono">Try: SELECT * FROM students;</span>
+            class="input font-mono !text-[12.5px] resize-y">${UI.escape(sql)}</textarea>
+          <div class="flex items-center gap-3 mt-3">
+            <button id="sqlRun" class="btn btn-primary">Run query</button>
+            <span class="text-[11.5px] text-ink-muted font-mono">Try: SELECT * FROM students;</span>
           </div>
         </div>
 
         ${result ? `
-          <div class="mt-4">
+          <div class="mt-4 space-y-3">
             ${result.error ? `
-              <div class="surface border-red-500/30 rounded-lg p-4 text-red-300 text-xs font-mono">
+              <div class="bg-danger-soft border border-danger/30 rounded-lg p-4 text-danger-dark text-[12.5px] font-mono">
                 ${UI.escape(result.error)}
               </div>
             ` : result.sets.length === 0 ? `
-              <div class="surface rounded-lg p-4 text-emerald-400 text-xs font-mono">
-                Statement executed successfully. No rows returned.
+              <div class="bg-success-soft border border-success/30 rounded-lg p-4 text-success-dark text-[12.5px] font-mono">
+                Statement executed. No rows returned.
               </div>
             ` : result.sets.map(set => `
-              <div class="surface rounded-lg overflow-hidden mt-3">
-                <table class="w-full text-xs">
-                  <thead class="font-mono uppercase tracking-wider text-stone-500 bg-white/[0.02]">
-                    <tr class="border-b border-white/[0.06]">
-                      ${set.columns.map(c => `<th class="text-left px-4 py-2.5 font-normal">${UI.escape(c)}</th>`).join('')}
+              <div class="border border-line rounded-lg overflow-hidden">
+                <table class="text-[12px]">
+                  <thead class="bg-surface-soft font-mono uppercase tracking-wider text-ink-muted">
+                    <tr class="border-b border-line">
+                      ${set.columns.map(c => `<th class="text-left px-4 py-2.5">${UI.escape(c)}</th>`).join('')}
                     </tr>
                   </thead>
                   <tbody>
                     ${set.values.slice(0, 100).map(row => `
-                      <tr class="border-b border-white/[0.04] last:border-0">
-                        ${row.map(v => `<td class="px-4 py-2 text-stone-300 font-mono">${v === null ? '<span class="text-stone-600">NULL</span>' : UI.escape(v)}</td>`).join('')}
+                      <tr class="border-b border-line last:border-0">
+                        ${row.map(v => `<td class="px-4 py-2 text-ink font-mono tabular-nums">${v === null ? '<span class="text-ink-muted">NULL</span>' : UI.escape(v)}</td>`).join('')}
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
-                ${set.values.length > 100 ? `<div class="px-4 py-2 text-[11px] text-stone-500 border-t border-white/[0.06]">Showing first 100 of ${set.values.length} rows</div>` : ''}
+                ${set.values.length > 100 ? `<div class="px-4 py-2 text-[11px] text-ink-muted border-t border-line">Showing first 100 of ${set.values.length} rows</div>` : ''}
               </div>
             `).join('')}
           </div>
@@ -1255,12 +1342,12 @@ const Views = {
     }
 
     return `
-      <div class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p class="text-sm text-stone-500 mt-1">Transcripts, gradebooks, and a live SQL console</p>
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">Reports</h1>
+        <p class="text-[13.5px] text-ink-soft mt-1">Transcripts, gradebooks, and a live SQL console</p>
       </div>
 
-      <div class="flex gap-1 mb-5 border-b border-white/[0.06]">
+      <div class="flex gap-1 mb-5 border-b border-line overflow-x-auto">
         ${this._tab('transcript', 'Student transcript', tab)}
         ${this._tab('gradebook',  'Course gradebook',   tab)}
         ${this._tab('sql',        'SQL console',        tab)}
@@ -1268,7 +1355,7 @@ const Views = {
 
       ${tab === 'transcript' ? `
         <div class="mb-5">
-          <select id="reportsStudent" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          <select id="reportsStudent" class="input !w-auto">
             ${students.map(s => `<option value="${s.id}" ${s.id == this._reportsStudent ? 'selected' : ''}>${UI.escape(s.student_id)} — ${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</option>`).join('')}
           </select>
         </div>
@@ -1276,63 +1363,56 @@ const Views = {
 
       ${tab === 'gradebook' ? `
         <div class="mb-5">
-          <select id="reportsCourse" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          <select id="reportsCourse" class="input !w-auto">
             ${courses.map(c => `<option value="${c.id}" ${c.id == this._reportsCourse ? 'selected' : ''}>${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
           </select>
         </div>
       ` : ''}
 
-      <div class="surface rounded-xl p-6">${content}</div>
+      <div class="card p-6">${content}</div>
     `;
   },
 
   _tab(id, label, active) {
     const isActive = id === active;
-    return `<button data-reports-tab="${id}" class="px-4 py-2.5 text-[13px] font-medium transition-colors border-b-2 ${
-      isActive ? 'text-stone-100 border-accent' : 'text-stone-500 border-transparent hover:text-stone-300'
+    return `<button data-reports-tab="${id}" class="px-4 py-2.5 text-[13.5px] font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+      isActive ? 'text-primary-dark border-primary' : 'text-ink-soft border-transparent hover:text-ink'
     }">${UI.escape(label)}</button>`;
   }
 };
 
-/* ============================================================================
-   ROUTER + APP
-   ============================================================================ */
-
 const App = {
-
   currentView: 'dashboard',
 
   render() {
     document.getElementById('nav').innerHTML = NAV.map(item => `
-      <a href="#" data-view="${item.id}" class="nav-item flex items-center gap-3 px-5 py-2.5 text-[13px] text-stone-400 ${this.currentView === item.id ? 'active' : ''}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
+      <a href="#" data-view="${item.id}" class="nav-item ${this.currentView === item.id ? 'active' : ''}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
         ${UI.escape(item.label)}
       </a>
     `).join('');
 
     const user = Auth.current;
     document.getElementById('userCard').innerHTML = `
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center text-black font-semibold text-xs flex-shrink-0">
+      <div class="flex items-center gap-2.5 p-2 rounded-lg bg-bg">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-semibold text-[12px] shrink-0">
           ${UI.escape(user.name[0])}
         </div>
         <div class="min-w-0 flex-1">
-          <div class="text-[12px] text-stone-200 font-medium truncate">${UI.escape(user.name)}</div>
-          <div class="text-[10px] text-stone-500 font-mono truncate">@${UI.escape(user.username)}</div>
+          <div class="text-[12.5px] text-ink font-medium truncate">${UI.escape(user.name)}</div>
+          <div class="text-[10.5px] text-ink-muted font-mono truncate">@${UI.escape(user.username)}</div>
         </div>
       </div>
       <div class="mt-2.5 flex items-center justify-between">
         ${UI.roleBadge(user.role)}
-        <button id="logoutBtn" class="text-[11px] text-stone-500 hover:text-stone-100 transition-colors">Sign out</button>
+        <button id="logoutBtn" class="text-[11.5px] text-ink-muted hover:text-ink transition-colors font-medium">Sign out</button>
       </div>
     `;
 
     const current = NAV.find(n => n.id === this.currentView);
     document.getElementById('breadcrumb').textContent = current ? current.label : '';
 
-    const main = document.getElementById('main');
-    main.innerHTML = Views[this.currentView] ? Views[this.currentView]() : UI.empty('Not found');
-
+    document.getElementById('main').innerHTML = Views[this.currentView] ? Views[this.currentView]() : UI.empty('Not found');
     this.bind();
   },
 
@@ -1423,28 +1503,20 @@ const App = {
       el.addEventListener('click', () => {
         const [eid, status] = el.dataset.att.split('|');
         const date = Views._attDate || new Date().toISOString().slice(0, 10);
-        DB.run(
-          'INSERT OR REPLACE INTO attendance (enrollment_id, date, status) VALUES (?, ?, ?)',
-          [parseInt(eid, 10), date, status]
-        );
+        DB.run('INSERT OR REPLACE INTO attendance (enrollment_id, date, status) VALUES (?, ?, ?)', [parseInt(eid, 10), date, status]);
         UI.toast(`Marked ${status}`, 'success');
         this.render();
       });
     });
 
     document.querySelectorAll('[data-reports-tab]').forEach(el => {
-      el.addEventListener('click', () => {
-        Views._reportsTab = el.dataset.reportsTab;
-        this.render();
-      });
+      el.addEventListener('click', () => { Views._reportsTab = el.dataset.reportsTab; this.render(); });
     });
     document.getElementById('reportsStudent')?.addEventListener('change', e => {
-      Views._reportsStudent = parseInt(e.target.value, 10);
-      this.render();
+      Views._reportsStudent = parseInt(e.target.value, 10); this.render();
     });
     document.getElementById('reportsCourse')?.addEventListener('change', e => {
-      Views._reportsCourse = parseInt(e.target.value, 10);
-      this.render();
+      Views._reportsCourse = parseInt(e.target.value, 10); this.render();
     });
     document.getElementById('sqlRun')?.addEventListener('click', () => {
       const sql = document.getElementById('sqlConsole').value.trim();
@@ -1452,10 +1524,7 @@ const App = {
       Views._sqlInput = sql;
       try {
         const sets = DB.exec(sql);
-        Views._sqlResult = {
-          sets: sets.map(s => ({ columns: s.columns, values: s.values })),
-          error: null
-        };
+        Views._sqlResult = { sets: sets.map(s => ({ columns: s.columns, values: s.values })), error: null };
         if (sets.length === 0) UI.toast('Query executed — no rows', 'success');
         else UI.toast(`Returned ${sets[0].values.length} row${sets[0].values.length === 1 ? '' : 's'}`, 'success');
       } catch (err) {
@@ -1477,57 +1546,51 @@ const App = {
         <form id="studentForm" class="space-y-4">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Student ID</label>
-              <input name="student_id" required value="${UI.escape(s?.student_id || '')}" placeholder="STU-2025-011"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Student ID</label>
+              <input name="student_id" required value="${UI.escape(s?.student_id || '')}" placeholder="STU-2025-011" class="input font-mono">
             </div>
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Status</label>
-              <select name="status" class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Status</label>
+              <select name="status" class="input">
                 ${['active', 'graduated', 'suspended'].map(v => `<option value="${v}" ${s?.status === v ? 'selected' : ''}>${v}</option>`).join('')}
               </select>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">First name</label>
-              <input name="first_name" required value="${UI.escape(s?.first_name || '')}"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">First name</label>
+              <input name="first_name" required value="${UI.escape(s?.first_name || '')}" class="input">
             </div>
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Last name</label>
-              <input name="last_name" required value="${UI.escape(s?.last_name || '')}"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Last name</label>
+              <input name="last_name" required value="${UI.escape(s?.last_name || '')}" class="input">
             </div>
           </div>
           <div>
-            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Email</label>
-            <input name="email" type="email" required value="${UI.escape(s?.email || '')}"
-              class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Email</label>
+            <input name="email" type="email" required value="${UI.escape(s?.email || '')}" class="input">
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Phone</label>
-              <input name="phone" value="${UI.escape(s?.phone || '')}" placeholder="+251…"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Phone</label>
+              <input name="phone" value="${UI.escape(s?.phone || '')}" placeholder="+251…" class="input font-mono">
             </div>
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Year</label>
-              <input name="year" type="number" min="1" max="5" required value="${s?.year || 1}"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Year</label>
+              <input name="year" type="number" min="1" max="5" required value="${s?.year || 1}" class="input font-mono">
             </div>
           </div>
           <div>
-            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Department</label>
-            <select name="department_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Department</label>
+            <select name="department_id" required class="input">
               ${departments.map(d => `<option value="${d.id}" ${s?.department_id === d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
             </select>
           </div>
         </form>
       `,
       footer: `
-        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
-        <button id="studentSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">${editing ? 'Save changes' : 'Create student'}</button>
+        <button data-close class="btn btn-secondary">Cancel</button>
+        <button id="studentSave" class="btn btn-primary">${editing ? 'Save changes' : 'Create student'}</button>
       `,
       onMount(root) {
         root.querySelector('#studentSave').addEventListener('click', () => {
@@ -1536,19 +1599,14 @@ const App = {
           data.department_id = parseInt(data.department_id, 10);
           data.year = parseInt(data.year, 10);
           if (!editing) data.enrolled_date = new Date().toISOString().slice(0, 10);
-
           try {
             if (editing) {
-              DB.run(
-                `UPDATE students SET student_id=?, first_name=?, last_name=?, email=?, phone=?, department_id=?, year=?, status=? WHERE id=?`,
-                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.status, id]
-              );
+              DB.run(`UPDATE students SET student_id=?, first_name=?, last_name=?, email=?, phone=?, department_id=?, year=?, status=? WHERE id=?`,
+                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.status, id]);
               UI.toast('Student updated', 'success');
             } else {
-              DB.run(
-                `INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date, status) VALUES (?,?,?,?,?,?,?,?,?)`,
-                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.enrolled_date, data.status]
-              );
+              DB.run(`INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date, status) VALUES (?,?,?,?,?,?,?,?,?)`,
+                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.enrolled_date, data.status]);
               UI.toast('Student created', 'success');
             }
             UI.closeModal();
@@ -1572,39 +1630,35 @@ const App = {
         <form id="courseForm" class="space-y-4">
           <div class="grid grid-cols-3 gap-3">
             <div class="col-span-2">
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course code</label>
-              <input name="code" required value="${UI.escape(c?.code || '')}" placeholder="WDD-XXX"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Course code</label>
+              <input name="code" required value="${UI.escape(c?.code || '')}" placeholder="WDD-XXX" class="input font-mono">
             </div>
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Credits</label>
-              <input name="credits" type="number" min="1" max="6" required value="${c?.credits || 3}"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Credits</label>
+              <input name="credits" type="number" min="1" max="6" required value="${c?.credits || 3}" class="input font-mono">
             </div>
           </div>
           <div>
-            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Title</label>
-            <input name="title" required value="${UI.escape(c?.title || '')}"
-              class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Title</label>
+            <input name="title" required value="${UI.escape(c?.title || '')}" class="input">
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Department</label>
-              <select name="department_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Department</label>
+              <select name="department_id" required class="input">
                 ${departments.map(d => `<option value="${d.id}" ${c?.department_id === d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
               </select>
             </div>
             <div>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Semester</label>
-              <input name="semester" required value="${UI.escape(c?.semester || '')}" placeholder="2025-Fall"
-                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+              <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Semester</label>
+              <input name="semester" required value="${UI.escape(c?.semester || '')}" placeholder="2025-Fall" class="input font-mono">
             </div>
           </div>
         </form>
       `,
       footer: `
-        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
-        <button id="courseSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">${editing ? 'Save changes' : 'Create course'}</button>
+        <button data-close class="btn btn-secondary">Cancel</button>
+        <button id="courseSave" class="btn btn-primary">${editing ? 'Save changes' : 'Create course'}</button>
       `,
       onMount(root) {
         root.querySelector('#courseSave').addEventListener('click', () => {
@@ -1614,16 +1668,12 @@ const App = {
           data.credits = parseInt(data.credits, 10);
           try {
             if (editing) {
-              DB.run(
-                `UPDATE courses SET code=?, title=?, department_id=?, credits=?, semester=? WHERE id=?`,
-                [data.code, data.title, data.department_id, data.credits, data.semester, id]
-              );
+              DB.run(`UPDATE courses SET code=?, title=?, department_id=?, credits=?, semester=? WHERE id=?`,
+                [data.code, data.title, data.department_id, data.credits, data.semester, id]);
               UI.toast('Course updated', 'success');
             } else {
-              DB.run(
-                `INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)`,
-                [data.code, data.title, data.department_id, data.credits, data.semester]
-              );
+              DB.run(`INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)`,
+                [data.code, data.title, data.department_id, data.credits, data.semester]);
               UI.toast('Course created', 'success');
             }
             UI.closeModal();
@@ -1645,22 +1695,22 @@ const App = {
       body: `
         <form id="enrollForm" class="space-y-4">
           <div>
-            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Student</label>
-            <select name="student_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Student</label>
+            <select name="student_id" required class="input">
               ${students.map(s => `<option value="${s.id}">${UI.escape(s.student_id)} — ${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course</label>
-            <select name="course_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Course</label>
+            <select name="course_id" required class="input">
               ${courses.map(c => `<option value="${c.id}">${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
             </select>
           </div>
         </form>
       `,
       footer: `
-        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
-        <button id="enrollSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">Enroll</button>
+        <button data-close class="btn btn-secondary">Cancel</button>
+        <button id="enrollSave" class="btn btn-primary">Enroll</button>
       `,
       onMount(root) {
         root.querySelector('#enrollSave').addEventListener('click', () => {
@@ -1668,10 +1718,8 @@ const App = {
           const student_id = parseInt(fd.get('student_id'), 10);
           const course_id = parseInt(fd.get('course_id'), 10);
           try {
-            DB.run(
-              `INSERT INTO enrollments (student_id, course_id, enrolled_at) VALUES (?,?,?)`,
-              [student_id, course_id, new Date().toISOString().slice(0, 10)]
-            );
+            DB.run(`INSERT INTO enrollments (student_id, course_id, enrolled_at) VALUES (?,?,?)`,
+              [student_id, course_id, new Date().toISOString().slice(0, 10)]);
             UI.toast('Student enrolled', 'success');
             UI.closeModal();
             App.render();
@@ -1695,32 +1743,25 @@ const App = {
     UI.modal({
       title: 'Enter grade',
       body: `
-        <div class="mb-4 text-sm text-stone-400">
-          <div class="text-stone-100 font-medium">${UI.escape(e.first_name)} ${UI.escape(e.last_name)}</div>
-          <div class="text-xs font-mono text-stone-500 mt-1">${UI.escape(e.code)} — ${UI.escape(e.title)}</div>
+        <div class="mb-4 p-3 bg-bg rounded-lg">
+          <div class="text-[13.5px] text-ink font-medium">${UI.escape(e.first_name)} ${UI.escape(e.last_name)}</div>
+          <div class="text-[11.5px] font-mono text-ink-muted mt-1">${UI.escape(e.code)} — ${UI.escape(e.title)}</div>
         </div>
         <form id="gradeForm">
-          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Grade (0 – 100)</label>
-          <input name="grade" type="number" min="0" max="100" step="0.5" value="${e.grade ?? ''}" required
-            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-stone-100 outline-none font-mono">
-          <p class="text-[11px] text-stone-500 mt-2">Letter grade is computed automatically: A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60, F below.</p>
+          <label class="block text-[10.5px] font-mono uppercase tracking-widest text-ink-muted mb-2">Grade (0 – 100)</label>
+          <input name="grade" type="number" min="0" max="100" step="0.5" value="${e.grade ?? ''}" required class="input font-mono">
+          <p class="text-[11.5px] text-ink-muted mt-2">Letter grade is computed automatically: A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60, F below.</p>
         </form>
       `,
       footer: `
-        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
-        <button id="gradeSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">Save grade</button>
+        <button data-close class="btn btn-secondary">Cancel</button>
+        <button id="gradeSave" class="btn btn-primary">Save grade</button>
       `,
       onMount(root) {
         root.querySelector('#gradeSave').addEventListener('click', () => {
           const val = parseFloat(root.querySelector('[name=grade]').value);
-          if (isNaN(val) || val < 0 || val > 100) {
-            UI.toast('Grade must be between 0 and 100', 'error');
-            return;
-          }
-          DB.run(
-            'UPDATE enrollments SET grade = ?, letter_grade = ? WHERE id = ?',
-            [val, DB.letterGrade(val), id]
-          );
+          if (isNaN(val) || val < 0 || val > 100) { UI.toast('Grade must be between 0 and 100', 'error'); return; }
+          DB.run('UPDATE enrollments SET grade = ?, letter_grade = ? WHERE id = ?', [val, DB.letterGrade(val), id]);
           UI.toast('Grade saved', 'success');
           UI.closeModal();
           App.render();
@@ -1729,10 +1770,6 @@ const App = {
     });
   }
 };
-
-/* ============================================================================
-   BOOT
-   ============================================================================ */
 
 (async function boot() {
   try {
@@ -1752,14 +1789,12 @@ const App = {
       const pass = document.getElementById('loginPass').value;
       const errEl = document.getElementById('loginError');
       errEl.classList.add('hidden');
-
       const res = await Auth.login(user, pass);
       if (!res.ok) {
         errEl.textContent = res.error;
         errEl.classList.remove('hidden');
         return;
       }
-
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('loginScreen').classList.remove('flex');
       document.getElementById('app').classList.remove('hidden');
@@ -1785,8 +1820,8 @@ const App = {
     console.error(err);
     document.getElementById('loading').innerHTML = `
       <div class="text-center max-w-md">
-        <div class="text-red-400 text-sm font-mono">Failed to initialize database</div>
-        <div class="text-xs text-stone-500 mt-2">${UI.escape(err.message)}</div>
+        <div class="text-danger text-sm font-mono">Failed to initialize database</div>
+        <div class="text-xs text-ink-muted mt-2">${UI.escape(err.message)}</div>
       </div>
     `;
   }
