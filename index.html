@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRMS — Student Records Management System</title>
+<meta name="description" content="A web-based student records management system with real SQL database running in the browser.">
+<meta name="author" content="Samuel Tadele Refera">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg: { 950: '#08090a', 900: '#0d0e10', 850: '#121316', 800: '#17181c', 700: '#1e2025', 600: '#26282f' },
+        accent: { DEFAULT: '#5b8def', soft: '#7ba1f5' }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+      }
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  body { background: #08090a; color: #f7f8f8; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.011em; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #08090a; }
+  ::-webkit-scrollbar-thumb { background: #1e2025; border-radius: 5px; border: 2px solid #08090a; }
+  ::-webkit-scrollbar-thumb:hover { background: #26282f; }
+  ::selection { background: #5b8def; color: #08090a; }
+
+  .surface { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 60%), #0d0e10; border: 1px solid rgba(255,255,255,0.07); }
+  .surface-hover:hover { border-color: rgba(255,255,255,0.14); }
+  .grid-backdrop {
+    background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  input, select, textarea { color-scheme: dark; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(91,141,239,0.5); outline-offset: 0; border-color: #5b8def; }
+
+  .nav-item { transition: all .2s; border-left: 2px solid transparent; }
+  .nav-item:hover { background: rgba(255,255,255,0.03); color: #f7f8f8; }
+  .nav-item.active { background: rgba(91,141,239,0.10); color: #7ba1f5; border-left-color: #5b8def; }
+
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .toast { animation: toastIn .25s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+  .modal-panel { animation: modalIn .2s ease; }
+
+  table { border-collapse: separate; border-spacing: 0; }
+  th { font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOADING ============ -->
+<div id="loading" class="fixed inset-0 flex items-center justify-center bg-bg-950 z-50">
+  <div class="text-center">
+    <div class="w-10 h-10 border-2 border-white/10 border-t-accent rounded-full animate-spin mx-auto"></div>
+    <p class="mt-4 text-sm text-stone-500 font-mono">Initializing SQL engine…</p>
+  </div>
+</div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen" class="hidden fixed inset-0 grid-backdrop items-center justify-center p-6 z-40">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center mx-auto mb-5">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#08090a" stroke-width="2" stroke-linecap="round">
+          <ellipse cx="12" cy="6" rx="8" ry="3"/>
+          <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
+          <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-semibold tracking-tight">Student Records System</h1>
+      <p class="text-sm text-stone-500 mt-2">Sign in to continue</p>
+    </div>
+
+    <form id="loginForm" class="surface rounded-2xl p-7 space-y-5">
+      <div>
+        <label class="block text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-2">Username</label>
+        <input id="loginUser" type="text" required autocomplete="username"
+          class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-stone-100 outline-none transition-colors">
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-2">Password</label>
+        <input id="loginPass" type="password" required autocomplete="current-password"
+          class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-sm text-stone-100 outline-none transition-colors">
+      </div>
+      <button type="submit" class="w-full bg-white hover:bg-stone-200 text-black font-medium py-2.5 rounded-lg text-sm transition-colors">
+        Sign in
+      </button>
+      <p id="loginError" class="hidden text-xs text-red-400 text-center"></p>
+    </form>
+
+    <div class="mt-6 surface rounded-xl p-4">
+      <div class="text-[11px] font-mono uppercase tracking-widest text-stone-500 mb-3">Demo accounts</div>
+      <div class="space-y-2 text-xs">
+        <button type="button" data-fill="admin:admin123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
+          <span class="text-stone-300">admin / admin123</span>
+          <span class="text-[10px] font-mono text-amber-400/90 uppercase tracking-wider">Full access</span>
+        </button>
+        <button type="button" data-fill="teacher:teach123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
+          <span class="text-stone-300">teacher / teach123</span>
+          <span class="text-[10px] font-mono text-accent-soft uppercase tracking-wider">Manage</span>
+        </button>
+        <button type="button" data-fill="viewer:view123" class="w-full flex justify-between items-center px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors text-left">
+          <span class="text-stone-300">viewer / view123</span>
+          <span class="text-[10px] font-mono text-stone-500 uppercase tracking-wider">Read-only</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app" class="hidden min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 bottom-0 w-60 bg-bg-900 border-r border-white/[0.06] flex flex-col z-30">
+    <div class="h-14 flex items-center px-5 border-b border-white/[0.06]">
+      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center flex-shrink-0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#08090a" stroke-width="2.4" stroke-linecap="round">
+          <ellipse cx="12" cy="6" rx="8" ry="3"/>
+          <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
+        </svg>
+      </div>
+      <div class="ml-2.5">
+        <div class="text-[13px] font-semibold leading-tight">SRMS</div>
+        <div class="text-[10px] text-stone-500 font-mono leading-tight">v1.0</div>
+      </div>
+    </div>
+
+    <nav id="nav" class="flex-1 py-3 space-y-0.5">
+      <!-- Populated by JS -->
+    </nav>
+
+    <div class="p-3 border-t border-white/[0.06]">
+      <div id="userCard" class="surface rounded-lg p-3">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main area -->
+  <div class="ml-60">
+    <header class="h-14 border-b border-white/[0.06] bg-bg-950/70 backdrop-blur-xl sticky top-0 z-20">
+      <div class="h-full px-6 flex items-center justify-between">
+        <div id="breadcrumb" class="text-[13px] text-stone-500"></div>
+        <div class="flex items-center gap-3">
+          <button id="resetDbBtn" class="text-[12px] text-stone-500 hover:text-stone-200 transition-colors inline-flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset database
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="p-6 lg:p-8 max-w-7xl"></main>
+  </div>
+</div>
+
+<!-- Modal root -->
+<div id="modalRoot" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm items-center justify-center p-4"></div>
+
+<!-- Toast root -->
+<div id="toastRoot" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+<script>
+/* ============================================================================
+   SRMS — Student Records Management System
+   A single-file web app demonstrating real SQL (SQLite via WebAssembly)
+   running entirely in the browser.
+   
+   Architecture:
+   - DB:      Database layer — schema, seed, query helpers, persistence
+   - Auth:    Login + role-based permissions
+   - UI:      Toast, modal, escape, format helpers
+   - Views:   One object per screen (dashboard, students, courses, ...)
+   - Router:  Simple hash-less view switching
+   - App:     Init sequence + event wiring
+   ============================================================================ */
+
+/* ============================================================================
+   DB LAYER
+   ============================================================================ */
+
+const DB = {
+  sql: null,       // SQL.js module
+  db: null,        // SQLite database instance
+  STORAGE_KEY: 'srms_db_v1',
+
+  async init() {
+    this.sql = await initSqlJs({
+      locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
+    });
+
+    const saved = localStorage.getItem(this.STORAGE_KEY);
+    if (saved) {
+      try {
+        const bytes = Uint8Array.from(JSON.parse(saved));
+        this.db = new this.sql.Database(bytes);
+        // Verify it's a real DB (not corrupt)
+        this.db.exec('SELECT COUNT(*) FROM students');
+        return;
+      } catch (e) {
+        console.warn('Saved DB was invalid, reseeding.', e);
+        localStorage.removeItem(this.STORAGE_KEY);
+      }
+    }
+
+    this.db = new this.sql.Database();
+    this.seed();
+    this.save();
+  },
+
+  /* Create tables + insert seed data */
+  seed() {
+    this.db.run(`
+      PRAGMA foreign_keys = ON;
+
+      CREATE TABLE departments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL
+      );
+
+      CREATE TABLE students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT UNIQUE NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        phone TEXT,
+        department_id INTEGER NOT NULL,
+        year INTEGER NOT NULL CHECK (year BETWEEN 1 AND 5),
+        enrolled_date TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','graduated','suspended')),
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+      );
+
+      CREATE TABLE courses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        department_id INTEGER NOT NULL,
+        credits INTEGER NOT NULL CHECK (credits BETWEEN 1 AND 6),
+        semester TEXT NOT NULL,
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+      );
+
+      CREATE TABLE enrollments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        course_id INTEGER NOT NULL,
+        enrolled_at TEXT NOT NULL,
+        grade REAL CHECK (grade IS NULL OR (grade >= 0 AND grade <= 100)),
+        letter_grade TEXT,
+        UNIQUE(student_id, course_id),
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        enrollment_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('present','absent','late','excused')),
+        UNIQUE(enrollment_id, date),
+        FOREIGN KEY (enrollment_id) REFERENCES enrollments(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin','teacher','viewer')),
+        display_name TEXT NOT NULL
+      );
+
+      CREATE INDEX idx_students_dept ON students(department_id);
+      CREATE INDEX idx_enrollments_student ON enrollments(student_id);
+      CREATE INDEX idx_enrollments_course ON enrollments(course_id);
+      CREATE INDEX idx_attendance_enrollment ON attendance(enrollment_id);
+    `);
+
+    // ---- Departments
+    const departments = [
+      ['CS', 'Computer Science'],
+      ['IT', 'Information Technology'],
+      ['SE', 'Software Engineering'],
+      ['IS', 'Information Systems'],
+    ];
+    departments.forEach(d => this.db.run('INSERT INTO departments (code, name) VALUES (?, ?)', d));
+
+    // ---- Students (realistic Ethiopian TVET names)
+    const students = [
+      ['STU-2024-001', 'Abebe',    'Bekele',     'abebe.bekele@student.edu',     '+251911000001', 1, 2, '2024-09-01'],
+      ['STU-2024-002', 'Sara',     'Tadesse',    'sara.tadesse@student.edu',     '+251911000002', 2, 2, '2024-09-01'],
+      ['STU-2024-003', 'Dawit',    'Haile',      'dawit.haile@student.edu',      '+251911000003', 3, 3, '2023-09-01'],
+      ['STU-2024-004', 'Hana',     'Girma',      'hana.girma@student.edu',       '+251911000004', 1, 2, '2024-09-01'],
+      ['STU-2024-005', 'Yohannes', 'Tesfaye',    'yohannes.tesfaye@student.edu', '+251911000005', 4, 1, '2025-09-01'],
+      ['STU-2024-006', 'Meron',    'Assefa',     'meron.assefa@student.edu',     '+251911000006', 2, 3, '2023-09-01'],
+      ['STU-2024-007', 'Samuel',   'Tadele',     'samuel.tadele@student.edu',    '+251911000007', 3, 4, '2022-09-01'],
+      ['STU-2024-008', 'Ruth',     'Mekonnen',   'ruth.mekonnen@student.edu',    '+251911000008', 1, 1, '2025-09-01'],
+      ['STU-2024-009', 'Kalkidan', 'Alemayehu',  'kalkidan.a@student.edu',       '+251911000009', 4, 2, '2024-09-01'],
+      ['STU-2024-010', 'Bereket',  'Solomon',    'bereket.solomon@student.edu',  '+251911000010', 3, 4, '2022-09-01'],
+    ];
+    students.forEach(s => this.db.run(
+      'INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date) VALUES (?,?,?,?,?,?,?,?)',
+      s
+    ));
+
+    // ---- Courses
+    const courses = [
+      ['WDD-101', 'Web Design Fundamentals',          1, 3, '2024-Fall'],
+      ['WDD-102', 'HTML5 & CSS3',                     1, 3, '2024-Fall'],
+      ['WDD-201', 'JavaScript Programming',           1, 4, '2025-Spring'],
+      ['WDD-202', 'Database Design & SQL',            1, 4, '2025-Spring'],
+      ['WDD-301', 'Server-Side Scripting',            3, 4, '2025-Fall'],
+      ['WDD-302', 'Advanced Database Administration',  1, 4, '2025-Fall'],
+      ['WDD-401', 'Web Application Security',         3, 3, '2025-Fall'],
+      ['WDD-402', 'Capstone Project',                 1, 6, '2025-Fall'],
+    ];
+    courses.forEach(c => this.db.run(
+      'INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)',
+      c
+    ));
+
+    // ---- Enrollments (student_id, course_id, grade)
+    // grade NULL means "enrolled but not yet graded"
+    const grades = [
+      [1, 1, 92], [1, 2, 88], [1, 3, 85],
+      [2, 1, 78], [2, 2, 82], [2, 3, 75], [2, 4, 80],
+      [3, 5, 91], [3, 6, 89], [3, 8, 94],
+      [4, 1, 66], [4, 2, 72], [4, 4, 70],
+      [5, 1, null], [5, 2, null],
+      [6, 5, 87], [6, 6, 84], [6, 7, 79],
+      [7, 5, 96], [7, 6, 95], [7, 7, 93], [7, 8, 97],
+      [8, 1, null], [8, 2, null],
+      [9, 3, 74], [9, 4, 68],
+      [10, 7, 89], [10, 8, 92], [10, 5, 88],
+    ];
+    grades.forEach(g => {
+      this.db.run(
+        'INSERT INTO enrollments (student_id, course_id, enrolled_at, grade, letter_grade) VALUES (?,?,?,?,?)',
+        [g[0], g[1], '2025-09-15', g[2], g[2] !== null ? this.letterGrade(g[2]) : null]
+      );
+    });
+
+    // ---- Attendance (sample records for first enrollment of each student)
+    const today = new Date();
+    const dates = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i * 7);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    const statuses = ['present', 'present', 'late', 'present', 'absent', 'present'];
+    this.db.exec('SELECT id FROM enrollments').forEach(() => {});
+    const enrollIds = [];
+    const res = this.db.exec('SELECT id FROM enrollments ORDER BY id');
+    if (res[0]) res[0].values.forEach(v => enrollIds.push(v[0]));
+    enrollIds.slice(0, 15).forEach((eid, i) => {
+      dates.forEach((date, j) => {
+        const status = statuses[(i + j) % statuses.length];
+        this.db.run(
+          'INSERT OR IGNORE INTO attendance (enrollment_id, date, status) VALUES (?,?,?)',
+          [eid, date, status]
+        );
+      });
+    });
+
+    // ---- Users (password_hash = SHA-256 of username + password)
+    const users = [
+      ['admin',   'admin',   'admin123',  'admin',   'Administrator'],
+      ['teacher', 'teacher', 'teach123',  'teacher', 'Instructor'],
+      ['viewer',  'viewer',  'view123',   'viewer',  'Read-only Guest'],
+    ];
+    users.forEach(async u => {
+      const hash = await Auth.hash(u[2], u[0]);
+      this.db.run(
+        'INSERT INTO users (username, password_hash, role, display_name) VALUES (?,?,?,?)',
+        [u[0], hash, u[3], u[4]]
+      );
+    });
+  },
+
+  letterGrade(g) {
+    if (g === null || g === undefined) return null;
+    if (g >= 90) return 'A';
+    if (g >= 80) return 'B';
+    if (g >= 70) return 'C';
+    if (g >= 60) return 'D';
+    return 'F';
+  },
+
+  /* Run a SELECT and return array of row objects */
+  all(sql, params = []) {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) rows.push(stmt.getAsObject());
+    stmt.free();
+    return rows;
+  },
+
+  /* Run a SELECT and return first row or null */
+  one(sql, params = []) {
+    const rows = this.all(sql, params);
+    return rows[0] || null;
+  },
+
+  /* Run an INSERT/UPDATE/DELETE */
+  run(sql, params = []) {
+    this.db.run(sql, params);
+    this.save();
+  },
+
+  /* Get the id of the last inserted row */
+  lastId() {
+    return this.db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+  },
+
+  save() {
+    const data = this.db.export();
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(Array.from(data)));
+  },
+
+  reset() {
+    localStorage.removeItem(this.STORAGE_KEY);
+    this.db = new this.sql.Database();
+    this.seed();
+    this.save();
+  },
+
+  /* For SQL console: run any statement, return array of result sets */
+  exec(sql) {
+    return this.db.exec(sql);
+  }
+};
+
+/* ============================================================================
+   AUTH LAYER
+   ============================================================================ */
+
+const Auth = {
+  current: null,
+
+  async hash(password, salt) {
+    const data = new TextEncoder().encode(salt + '::' + password);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  },
+
+  async login(username, password) {
+    const user = DB.one('SELECT * FROM users WHERE username = ?', [username]);
+    if (!user) return { ok: false, error: 'User not found' };
+    const hash = await this.hash(password, username);
+    if (hash !== user.password_hash) return { ok: false, error: 'Incorrect password' };
+    this.current = { id: user.id, username: user.username, role: user.role, name: user.display_name };
+    return { ok: true };
+  },
+
+  logout() {
+    this.current = null;
+  },
+
+  can(action) {
+    if (!this.current) return false;
+    const r = this.current.role;
+    const perms = {
+      'students.create':  ['admin', 'teacher'],
+      'students.edit':    ['admin', 'teacher'],
+      'students.delete':  ['admin'],
+      'courses.create':   ['admin', 'teacher'],
+      'courses.edit':     ['admin', 'teacher'],
+      'courses.delete':   ['admin'],
+      'enrollments.create': ['admin', 'teacher'],
+      'enrollments.grade':  ['admin', 'teacher'],
+      'enrollments.delete': ['admin'],
+      'attendance.mark':  ['admin', 'teacher'],
+      'db.reset':         ['admin'],
+    };
+    return (perms[action] || []).includes(r);
+  }
+};
+
+/* ============================================================================
+   UI HELPERS
+   ============================================================================ */
+
+const UI = {
+  escape(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  },
+
+  toast(message, type = 'info') {
+    const colors = {
+      info:    'border-white/10 text-stone-200',
+      success: 'border-emerald-500/30 text-emerald-300',
+      error:   'border-red-500/30 text-red-300',
+      warn:    'border-amber-500/30 text-amber-300',
+    };
+    const el = document.createElement('div');
+    el.className = `toast surface rounded-lg px-4 py-3 text-sm max-w-xs shadow-xl border ${colors[type]}`;
+    el.textContent = message;
+    document.getElementById('toastRoot').appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(8px)';
+      setTimeout(() => el.remove(), 300);
+    }, 3200);
+  },
+
+  /* Generic modal — pass HTML for body + optional footer buttons */
+  modal({ title, body, footer, onMount, wide }) {
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-panel surface rounded-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[88vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-5 border-b border-white/[0.06]">
+          <h2 class="text-base font-medium">${UI.escape(title)}</h2>
+          <button data-close aria-label="Close" class="w-8 h-8 rounded-md text-stone-500 hover:text-stone-100 hover:bg-white/[0.05] flex items-center justify-center transition-colors">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="p-5">${body}</div>
+        ${footer ? `<div class="p-5 border-t border-white/[0.06] flex justify-end gap-2">${footer}</div>` : ''}
+      </div>
+    `;
+    root.classList.remove('hidden');
+    root.classList.add('flex');
+
+    root.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', UI.closeModal));
+    root.addEventListener('mousedown', e => { if (e.target === root) UI.closeModal(); });
+
+    if (onMount) onMount(root);
+  },
+
+  closeModal() {
+    const root = document.getElementById('modalRoot');
+    root.classList.add('hidden');
+    root.classList.remove('flex');
+    root.innerHTML = '';
+  },
+
+  confirm(message, onConfirm) {
+    UI.modal({
+      title: 'Confirm action',
+      body: `<p class="text-sm text-stone-300">${UI.escape(message)}</p>`,
+      footer: `
+        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
+        <button id="confirmYes" class="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-400 text-white rounded-lg transition-colors">Delete</button>
+      `,
+      onMount(root) {
+        root.querySelector('#confirmYes').addEventListener('click', () => {
+          UI.closeModal();
+          onConfirm();
+        });
+      }
+    });
+  },
+
+  gradeColor(grade) {
+    if (grade === null || grade === undefined) return 'text-stone-500';
+    if (grade >= 90) return 'text-emerald-400';
+    if (grade >= 80) return 'text-accent-soft';
+    if (grade >= 70) return 'text-stone-300';
+    if (grade >= 60) return 'text-amber-400';
+    return 'text-red-400';
+  },
+
+  roleBadge(role) {
+    const map = {
+      admin:   'bg-amber-500/10 text-amber-300 border-amber-500/30',
+      teacher: 'bg-accent/10 text-accent-soft border-accent/30',
+      viewer:  'bg-white/[0.04] text-stone-400 border-white/[0.10]',
+    };
+    return `<span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded border ${map[role]}">${role}</span>`;
+  },
+
+  empty(title, hint) {
+    return `
+      <div class="text-center py-16 px-6">
+        <div class="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="text-stone-600">
+            <circle cx="11" cy="11" r="7"/><path d="M4 20l6-6"/>
+          </svg>
+        </div>
+        <h3 class="text-sm text-stone-300 font-medium">${UI.escape(title)}</h3>
+        ${hint ? `<p class="text-xs text-stone-500 mt-1.5 max-w-sm mx-auto">${UI.escape(hint)}</p>` : ''}
+      </div>
+    `;
+  }
+};
+
+/* ============================================================================
+   NAVIGATION DEFINITION
+   ============================================================================ */
+
+const NAV = [
+  { id: 'dashboard',   label: 'Dashboard',   icon: '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>' },
+  { id: 'students',    label: 'Students',    icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>' },
+  { id: 'courses',     label: 'Courses',     icon: '<path d="M4 5h16v14H4z"/><path d="M4 9h16"/>' },
+  { id: 'enrollments', label: 'Enrollments', icon: '<path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/>' },
+  { id: 'attendance',  label: 'Attendance',  icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>' },
+  { id: 'reports',     label: 'Reports',     icon: '<path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>' },
+];
+
+/* ============================================================================
+   VIEWS
+   ============================================================================ */
+
+const Views = {
+
+  /* ---------------- Dashboard ---------------- */
+  dashboard() {
+    const stats = {
+      students: DB.one("SELECT COUNT(*) c FROM students WHERE status='active'").c,
+      courses:  DB.one("SELECT COUNT(*) c FROM courses").c,
+      enrolls:  DB.one("SELECT COUNT(*) c FROM enrollments").c,
+      avg:      DB.one("SELECT ROUND(AVG(grade),1) a FROM enrollments WHERE grade IS NOT NULL").a,
+    };
+
+    const byDept = DB.all(`
+      SELECT d.name, COUNT(s.id) AS count
+      FROM departments d
+      LEFT JOIN students s ON s.department_id = d.id
+      GROUP BY d.id ORDER BY count DESC
+    `);
+
+    const recent = DB.all(`
+      SELECT s.first_name || ' ' || s.last_name AS name,
+             c.code AS course,
+             e.grade, e.letter_grade
+      FROM enrollments e
+      JOIN students s ON e.student_id = s.id
+      JOIN courses c  ON e.course_id = c.id
+      ORDER BY e.id DESC LIMIT 6
+    `);
+
+    const maxDept = Math.max(...byDept.map(d => d.count), 1);
+    const topEnroll = DB.all(`
+      SELECT c.code, c.title, COUNT(e.id) AS count
+      FROM courses c
+      LEFT JOIN enrollments e ON e.course_id = c.id
+      GROUP BY c.id ORDER BY count DESC LIMIT 4
+    `);
+
+    return `
+      <div class="flex items-end justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p class="text-sm text-stone-500 mt-1">Overview of student records and academic activity</p>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        ${this._statCard('Active students', stats.students, 'from-accent/10')}
+        ${this._statCard('Courses offered', stats.courses, 'from-emerald-500/10')}
+        ${this._statCard('Enrollments', stats.enrolls, 'from-amber-500/10')}
+        ${this._statCard('Average grade', stats.avg ?? '—', 'from-purple-500/10')}
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="surface rounded-xl p-6">
+          <h2 class="text-sm font-medium text-stone-200 mb-5">Students by department</h2>
+          <div class="space-y-3">
+            ${byDept.map(d => `
+              <div>
+                <div class="flex justify-between text-xs mb-1.5">
+                  <span class="text-stone-400">${UI.escape(d.name)}</span>
+                  <span class="text-stone-500 font-mono">${d.count}</span>
+                </div>
+                <div class="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-accent to-[#8b7cff] rounded-full" style="width:${(d.count/maxDept)*100}%"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="surface rounded-xl p-6">
+          <h2 class="text-sm font-medium text-stone-200 mb-5">Top courses by enrollment</h2>
+          <div class="space-y-4">
+            ${topEnroll.map(c => `
+              <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-[10px] font-mono text-stone-400 flex-shrink-0">
+                  ${c.count}
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[13px] text-stone-200 font-medium">${UI.escape(c.title)}</div>
+                  <div class="text-[11px] text-stone-500 font-mono">${UI.escape(c.code)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="surface rounded-xl mt-4 overflow-hidden">
+        <div class="p-6 border-b border-white/[0.06]">
+          <h2 class="text-sm font-medium text-stone-200">Recent enrollment activity</h2>
+        </div>
+        <table class="w-full text-sm">
+          <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+            <tr class="border-b border-white/[0.06]">
+              <th class="text-left px-6 py-3 font-normal">Student</th>
+              <th class="text-left px-6 py-3 font-normal">Course</th>
+              <th class="text-right px-6 py-3 font-normal">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recent.map(r => `
+              <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
+                <td class="px-6 py-3 text-stone-200">${UI.escape(r.name)}</td>
+                <td class="px-6 py-3 text-stone-400 font-mono text-xs">${UI.escape(r.course)}</td>
+                <td class="px-6 py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
+                  ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">Pending</span>'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  _statCard(label, value, gradient) {
+    return `
+      <div class="surface surface-hover rounded-xl p-5 relative overflow-hidden transition-colors">
+        <div class="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-gradient-to-br ${gradient} to-transparent blur-2xl"></div>
+        <div class="relative">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-stone-500">${UI.escape(label)}</div>
+          <div class="text-3xl font-semibold text-stone-50 mt-3 tracking-tight">${value}</div>
+        </div>
+      </div>
+    `;
+  },
+
+  /* ---------------- Students ---------------- */
+  students() {
+    const search = this._studentsSearch || '';
+    const deptFilter = this._studentsDept || 'all';
+
+    const where = [];
+    const params = [];
+    if (search) {
+      where.push("(s.first_name LIKE ? OR s.last_name LIKE ? OR s.student_id LIKE ? OR s.email LIKE ?)");
+      const q = `%${search}%`;
+      params.push(q, q, q, q);
+    }
+    if (deptFilter !== 'all') { where.push('s.department_id = ?'); params.push(deptFilter); }
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+
+    const students = DB.all(`
+      SELECT s.*, d.name AS dept_name, d.code AS dept_code
+      FROM students s
+      JOIN departments d ON s.department_id = d.id
+      ${whereSql}
+      ORDER BY s.last_name, s.first_name
+    `, params);
+
+    const departments = DB.all('SELECT * FROM departments ORDER BY name');
+    const canCreate = Auth.can('students.create');
+
+    return `
+      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Students</h1>
+          <p class="text-sm text-stone-500 mt-1">${students.length} ${students.length === 1 ? 'record' : 'records'}</p>
+        </div>
+        ${canCreate ? `
+          <button id="newStudentBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New student
+          </button>
+        ` : ''}
+      </div>
+
+      <div class="surface rounded-xl mb-4 p-4 flex flex-wrap gap-3">
+        <div class="flex-1 min-w-[200px] relative">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">
+            <circle cx="11" cy="11" r="7"/><path d="M4 20l6-6"/>
+          </svg>
+          <input id="studentSearch" type="text" placeholder="Search by name, ID, or email…" value="${UI.escape(search)}"
+            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg pl-9 pr-3 py-2 text-sm text-stone-100 placeholder-stone-600 outline-none transition-colors">
+        </div>
+        <select id="studentDept" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none transition-colors">
+          <option value="all" ${deptFilter === 'all' ? 'selected' : ''}>All departments</option>
+          ${departments.map(d => `<option value="${d.id}" ${deptFilter == d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
+        </select>
+      </div>
+
+      ${students.length === 0 ? UI.empty('No students found', 'Try clearing your search or filters.') : `
+        <div class="surface rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+              <tr class="border-b border-white/[0.06]">
+                <th class="text-left px-6 py-3 font-normal">Student ID</th>
+                <th class="text-left px-6 py-3 font-normal">Name</th>
+                <th class="text-left px-6 py-3 font-normal">Department</th>
+                <th class="text-left px-6 py-3 font-normal">Year</th>
+                <th class="text-left px-6 py-3 font-normal">Status</th>
+                <th class="text-right px-6 py-3 font-normal">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(s => `
+                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
+                  <td class="px-6 py-3 font-mono text-xs text-stone-400">${UI.escape(s.student_id)}</td>
+                  <td class="px-6 py-3">
+                    <div class="text-stone-100">${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</div>
+                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(s.email)}</div>
+                  </td>
+                  <td class="px-6 py-3 text-stone-400 text-xs">${UI.escape(s.dept_name)}</td>
+                  <td class="px-6 py-3 text-stone-300 font-mono text-xs">Y${s.year}</td>
+                  <td class="px-6 py-3">
+                    <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded ${
+                      s.status === 'active' ? 'bg-emerald-500/10 text-emerald-300' :
+                      s.status === 'graduated' ? 'bg-accent/10 text-accent-soft' :
+                      'bg-red-500/10 text-red-300'
+                    }">${s.status}</span>
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    <div class="inline-flex gap-1">
+                      ${Auth.can('students.edit') ? `
+                        <button data-edit-student="${s.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-stone-100 hover:bg-white/[0.06] flex items-center justify-center transition-colors" title="Edit">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>
+                        </button>
+                      ` : ''}
+                      ${Auth.can('students.delete') ? `
+                        <button data-del-student="${s.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors" title="Delete">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    `;
+  },
+
+  /* ---------------- Courses ---------------- */
+  courses() {
+    const courses = DB.all(`
+      SELECT c.*, d.name AS dept_name, d.code AS dept_code,
+             (SELECT COUNT(*) FROM enrollments WHERE course_id = c.id) AS enrolled
+      FROM courses c
+      JOIN departments d ON c.department_id = d.id
+      ORDER BY c.code
+    `);
+    const canCreate = Auth.can('courses.create');
+
+    return `
+      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Courses</h1>
+          <p class="text-sm text-stone-500 mt-1">${courses.length} ${courses.length === 1 ? 'course' : 'courses'} offered</p>
+        </div>
+        ${canCreate ? `
+          <button id="newCourseBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New course
+          </button>
+        ` : ''}
+      </div>
+
+      ${courses.length === 0 ? UI.empty('No courses yet') : `
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${courses.map(c => `
+            <div class="surface surface-hover rounded-xl p-5 transition-colors">
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-accent-soft px-2 py-0.5 rounded border border-accent/25 bg-accent/[0.08]">${UI.escape(c.code)}</span>
+                <span class="text-[11px] text-stone-500 font-mono">${c.credits} cr</span>
+              </div>
+              <h3 class="text-stone-50 font-medium text-[15px] leading-snug mb-3">${UI.escape(c.title)}</h3>
+              <div class="text-[11px] text-stone-500 space-y-1">
+                <div>${UI.escape(c.dept_name)}</div>
+                <div class="font-mono">${UI.escape(c.semester)} · ${c.enrolled} enrolled</div>
+              </div>
+              <div class="flex gap-1 mt-4 pt-4 border-t border-white/[0.05]">
+                ${Auth.can('courses.edit') ? `
+                  <button data-edit-course="${c.id}" class="flex-1 text-[11px] text-stone-400 hover:text-stone-100 py-1.5 rounded-md hover:bg-white/[0.04] transition-colors">Edit</button>
+                ` : ''}
+                ${Auth.can('courses.delete') ? `
+                  <button data-del-course="${c.id}" class="flex-1 text-[11px] text-stone-400 hover:text-red-400 py-1.5 rounded-md hover:bg-red-500/10 transition-colors">Delete</button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    `;
+  },
+
+  /* ---------------- Enrollments ---------------- */
+  enrollments() {
+    const enrollments = DB.all(`
+      SELECT e.*,
+             s.student_id AS sid_code,
+             s.first_name || ' ' || s.last_name AS student_name,
+             c.code AS course_code, c.title AS course_title, c.credits
+      FROM enrollments e
+      JOIN students s ON e.student_id = s.id
+      JOIN courses  c ON e.course_id = c.id
+      ORDER BY e.id DESC
+    `);
+    const canCreate = Auth.can('enrollments.create');
+    const canGrade = Auth.can('enrollments.grade');
+    const canDelete = Auth.can('enrollments.delete');
+
+    return `
+      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Enrollments</h1>
+          <p class="text-sm text-stone-500 mt-1">${enrollments.length} active · grades on the right</p>
+        </div>
+        ${canCreate ? `
+          <button id="newEnrollBtn" class="inline-flex items-center gap-2 bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-sm transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Enroll student
+          </button>
+        ` : ''}
+      </div>
+
+      ${enrollments.length === 0 ? UI.empty('No enrollments yet') : `
+        <div class="surface rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+              <tr class="border-b border-white/[0.06]">
+                <th class="text-left px-6 py-3 font-normal">Student</th>
+                <th class="text-left px-6 py-3 font-normal">Course</th>
+                <th class="text-left px-6 py-3 font-normal">Credits</th>
+                <th class="text-left px-6 py-3 font-normal">Grade</th>
+                <th class="text-right px-6 py-3 font-normal">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enrollments.map(e => `
+                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
+                  <td class="px-6 py-3">
+                    <div class="text-stone-100">${UI.escape(e.student_name)}</div>
+                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(e.sid_code)}</div>
+                  </td>
+                  <td class="px-6 py-3">
+                    <div class="text-stone-200 text-[13px]">${UI.escape(e.course_title)}</div>
+                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(e.course_code)}</div>
+                  </td>
+                  <td class="px-6 py-3 text-stone-400 font-mono text-xs">${e.credits}</td>
+                  <td class="px-6 py-3">
+                    <span class="font-mono text-xs ${UI.gradeColor(e.grade)}">
+                      ${e.grade !== null ? `${e.grade} · ${e.letter_grade}` : '<span class="text-stone-600">Not graded</span>'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    <div class="inline-flex gap-1">
+                      ${canGrade ? `
+                        <button data-grade-enroll="${e.id}" class="text-[11px] text-stone-400 hover:text-accent-soft px-2.5 py-1 rounded-md hover:bg-accent/[0.08] transition-colors">Grade</button>
+                      ` : ''}
+                      ${canDelete ? `
+                        <button data-del-enroll="${e.id}" class="w-7 h-7 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors" title="Remove">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    `;
+  },
+
+  /* ---------------- Attendance ---------------- */
+  attendance() {
+    const selectedCourseId = this._attCourse || (DB.one('SELECT id FROM courses ORDER BY code')?.id);
+    const selectedDate = this._attDate || new Date().toISOString().slice(0, 10);
+    const courses = DB.all('SELECT id, code, title FROM courses ORDER BY code');
+
+    if (!selectedCourseId) return UI.empty('No courses available', 'Add a course first from the Courses page.');
+
+    const course = DB.one('SELECT * FROM courses WHERE id = ?', [selectedCourseId]);
+    const roster = DB.all(`
+      SELECT e.id AS enrollment_id,
+             s.student_id, s.first_name, s.last_name,
+             a.status AS att_status
+      FROM enrollments e
+      JOIN students s ON e.student_id = s.id
+      LEFT JOIN attendance a ON a.enrollment_id = e.id AND a.date = ?
+      WHERE e.course_id = ?
+      ORDER BY s.last_name
+    `, [selectedDate, selectedCourseId]);
+
+    const canMark = Auth.can('attendance.mark');
+
+    const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+    roster.forEach(r => { if (r.att_status) counts[r.att_status]++; });
+
+    return `
+      <div class="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Attendance</h1>
+          <p class="text-sm text-stone-500 mt-1">Mark and track daily attendance per course</p>
+        </div>
+      </div>
+
+      <div class="surface rounded-xl p-4 mb-4 grid sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course</label>
+          <select id="attCourseSelect" class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            ${courses.map(c => `<option value="${c.id}" ${c.id == selectedCourseId ? 'selected' : ''}>${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Date</label>
+          <input id="attDateInput" type="date" value="${selectedDate}"
+            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-3 mb-4">
+        ${this._attStat('Present', counts.present, 'text-emerald-400')}
+        ${this._attStat('Absent',  counts.absent,  'text-red-400')}
+        ${this._attStat('Late',    counts.late,    'text-amber-400')}
+        ${this._attStat('Excused', counts.excused, 'text-stone-400')}
+      </div>
+
+      ${roster.length === 0 ? UI.empty('No students enrolled', 'Enroll students in this course first.') : `
+        <div class="surface rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+              <tr class="border-b border-white/[0.06]">
+                <th class="text-left px-6 py-3 font-normal">Student</th>
+                <th class="text-left px-6 py-3 font-normal">Status</th>
+                <th class="text-right px-6 py-3 font-normal">Mark</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roster.map(r => `
+                <tr class="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.015] transition-colors">
+                  <td class="px-6 py-3">
+                    <div class="text-stone-100">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
+                    <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.student_id)}</div>
+                  </td>
+                  <td class="px-6 py-3">
+                    ${r.att_status
+                      ? `<span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded ${
+                          r.att_status === 'present' ? 'bg-emerald-500/10 text-emerald-300' :
+                          r.att_status === 'absent'  ? 'bg-red-500/10 text-red-300' :
+                          r.att_status === 'late'    ? 'bg-amber-500/10 text-amber-300' :
+                          'bg-white/[0.04] text-stone-400'
+                        }">${r.att_status}</span>`
+                      : '<span class="text-[11px] text-stone-600">Not marked</span>'}
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    ${canMark ? `
+                      <div class="inline-flex gap-1">
+                        <button data-att="${r.enrollment_id}|present" class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors">Present</button>
+                        <button data-att="${r.enrollment_id}|absent"  class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">Absent</button>
+                        <button data-att="${r.enrollment_id}|late"    class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors">Late</button>
+                        <button data-att="${r.enrollment_id}|excused" class="text-[11px] px-2.5 py-1 rounded-md text-stone-400 hover:text-stone-100 hover:bg-white/[0.05] transition-colors">Excused</button>
+                      </div>
+                    ` : '<span class="text-[11px] text-stone-600">Read only</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    `;
+  },
+
+  _attStat(label, value, color) {
+    return `
+      <div class="surface rounded-xl p-4">
+        <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">${label}</div>
+        <div class="text-2xl font-semibold mt-2 tracking-tight ${color}">${value}</div>
+      </div>
+    `;
+  },
+
+  /* ---------------- Reports ---------------- */
+  reports() {
+    const tab = this._reportsTab || 'transcript';
+    const students = DB.all('SELECT id, student_id, first_name, last_name FROM students ORDER BY last_name');
+    const courses = DB.all('SELECT id, code, title FROM courses ORDER BY code');
+
+    let content = '';
+
+    if (tab === 'transcript') {
+      const sid = this._reportsStudent || students[0]?.id;
+      if (sid) {
+        const student = DB.one(`
+          SELECT s.*, d.name AS dept_name FROM students s
+          JOIN departments d ON s.department_id = d.id
+          WHERE s.id = ?`, [sid]);
+
+        const rows = DB.all(`
+          SELECT c.code, c.title, c.credits, e.grade, e.letter_grade
+          FROM enrollments e
+          JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = ?
+          ORDER BY c.code`, [sid]);
+
+        const gpa = DB.one(`
+          SELECT ROUND(SUM(c.credits * CASE
+            WHEN e.grade >= 90 THEN 4.0 WHEN e.grade >= 80 THEN 3.0
+            WHEN e.grade >= 70 THEN 2.0 WHEN e.grade >= 60 THEN 1.0
+            ELSE 0.0 END) / NULLIF(SUM(c.credits), 0), 2) AS gpa,
+            SUM(c.credits) AS credits, COUNT(*) AS courses
+          FROM enrollments e
+          JOIN courses c ON e.course_id = c.id
+          WHERE e.student_id = ? AND e.grade IS NOT NULL`, [sid]);
+
+        content = `
+          <div class="flex items-center gap-4 mb-6">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center text-black font-semibold text-lg flex-shrink-0">
+              ${UI.escape(student.first_name[0] + student.last_name[0])}
+            </div>
+            <div>
+              <h3 class="text-lg font-medium">${UI.escape(student.first_name)} ${UI.escape(student.last_name)}</h3>
+              <p class="text-xs text-stone-500 font-mono">${UI.escape(student.student_id)} · ${UI.escape(student.dept_name)} · Year ${student.year}</p>
+            </div>
+            <div class="ml-auto text-right">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Cumulative GPA</div>
+              <div class="text-2xl font-semibold text-accent-soft tracking-tight">${gpa.gpa ?? '—'}</div>
+            </div>
+          </div>
+
+          ${rows.length === 0 ? UI.empty('No enrollments', 'This student is not enrolled in any course.') : `
+            <table class="w-full text-sm">
+              <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+                <tr class="border-b border-white/[0.06]">
+                  <th class="text-left py-3 font-normal">Course</th>
+                  <th class="text-right py-3 font-normal">Credits</th>
+                  <th class="text-right py-3 font-normal">Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => `
+                  <tr class="border-b border-white/[0.04] last:border-0">
+                    <td class="py-3">
+                      <div class="text-stone-200 text-[13px]">${UI.escape(r.title)}</div>
+                      <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.code)}</div>
+                    </td>
+                    <td class="py-3 text-right text-stone-400 font-mono text-xs">${r.credits}</td>
+                    <td class="py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
+                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">—</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot class="border-t border-white/[0.08]">
+                <tr>
+                  <td class="py-3 text-stone-400 text-xs uppercase tracking-wider font-mono">Total</td>
+                  <td class="py-3 text-right text-stone-300 font-mono text-xs">${gpa.credits ?? 0} cr</td>
+                  <td class="py-3 text-right text-stone-300 font-mono text-xs">${gpa.courses ?? 0} courses</td>
+                </tr>
+              </tfoot>
+            </table>
+          `}
+        `;
+      }
+    } else if (tab === 'gradebook') {
+      const cid = this._reportsCourse || courses[0]?.id;
+      if (cid) {
+        const course = DB.one('SELECT * FROM courses WHERE id = ?', [cid]);
+        const rows = DB.all(`
+          SELECT s.student_id, s.first_name, s.last_name, e.grade, e.letter_grade
+          FROM enrollments e
+          JOIN students s ON e.student_id = s.id
+          WHERE e.course_id = ?
+          ORDER BY s.last_name`, [cid]);
+
+        const stats = DB.one(`
+          SELECT ROUND(AVG(grade),1) avg, MIN(grade) min, MAX(grade) max
+          FROM enrollments WHERE course_id = ? AND grade IS NOT NULL`, [cid]);
+
+        content = `
+          <div class="flex items-end justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-medium">${UI.escape(course.title)}</h3>
+              <p class="text-xs text-stone-500 font-mono mt-1">${UI.escape(course.code)} · ${course.credits} credits · ${course.semester}</p>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Class average</div>
+              <div class="text-2xl font-semibold text-accent-soft tracking-tight">${stats.avg ?? '—'}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="surface rounded-lg p-4">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Enrolled</div>
+              <div class="text-xl font-semibold mt-2">${rows.length}</div>
+            </div>
+            <div class="surface rounded-lg p-4">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Highest</div>
+              <div class="text-xl font-semibold mt-2 text-emerald-400">${stats.max ?? '—'}</div>
+            </div>
+            <div class="surface rounded-lg p-4">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-stone-500">Lowest</div>
+              <div class="text-xl font-semibold mt-2 text-amber-400">${stats.min ?? '—'}</div>
+            </div>
+          </div>
+
+          ${rows.length === 0 ? UI.empty('No enrollments') : `
+            <table class="w-full text-sm">
+              <thead class="text-[11px] font-mono uppercase tracking-wider text-stone-500">
+                <tr class="border-b border-white/[0.06]">
+                  <th class="text-left py-3 font-normal">Student</th>
+                  <th class="text-right py-3 font-normal">Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => `
+                  <tr class="border-b border-white/[0.04] last:border-0">
+                    <td class="py-3">
+                      <div class="text-stone-200 text-[13px]">${UI.escape(r.first_name)} ${UI.escape(r.last_name)}</div>
+                      <div class="text-[11px] text-stone-500 font-mono">${UI.escape(r.student_id)}</div>
+                    </td>
+                    <td class="py-3 text-right font-mono text-xs ${UI.gradeColor(r.grade)}">
+                      ${r.grade !== null ? `${r.grade} · ${r.letter_grade}` : '<span class="text-stone-600">—</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `}
+        `;
+      }
+    } else {
+      // SQL Console
+      const sql = this._sqlInput || '';
+      let result = this._sqlResult;
+      content = `
+        <div class="mb-4">
+          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Run SQL against the live database</label>
+          <textarea id="sqlConsole" rows="4" spellcheck="false" placeholder="SELECT * FROM students LIMIT 10;"
+            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3.5 py-3 text-[13px] text-stone-100 font-mono outline-none resize-y">${UI.escape(sql)}</textarea>
+          <div class="flex items-center gap-2 mt-3">
+            <button id="sqlRun" class="bg-white hover:bg-stone-200 text-black font-medium px-4 py-2 rounded-lg text-[13px] transition-colors">Run query</button>
+            <span class="text-[11px] text-stone-500 font-mono">Try: SELECT * FROM students;</span>
+          </div>
+        </div>
+
+        ${result ? `
+          <div class="mt-4">
+            ${result.error ? `
+              <div class="surface border-red-500/30 rounded-lg p-4 text-red-300 text-xs font-mono">
+                ${UI.escape(result.error)}
+              </div>
+            ` : result.sets.length === 0 ? `
+              <div class="surface rounded-lg p-4 text-emerald-400 text-xs font-mono">
+                Statement executed successfully. No rows returned.
+              </div>
+            ` : result.sets.map(set => `
+              <div class="surface rounded-lg overflow-hidden mt-3">
+                <table class="w-full text-xs">
+                  <thead class="font-mono uppercase tracking-wider text-stone-500 bg-white/[0.02]">
+                    <tr class="border-b border-white/[0.06]">
+                      ${set.columns.map(c => `<th class="text-left px-4 py-2.5 font-normal">${UI.escape(c)}</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${set.values.slice(0, 100).map(row => `
+                      <tr class="border-b border-white/[0.04] last:border-0">
+                        ${row.map(v => `<td class="px-4 py-2 text-stone-300 font-mono">${v === null ? '<span class="text-stone-600">NULL</span>' : UI.escape(v)}</td>`).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                ${set.values.length > 100 ? `<div class="px-4 py-2 text-[11px] text-stone-500 border-t border-white/[0.06]">Showing first 100 of ${set.values.length} rows</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    // Render reports view
+    return `
+      <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight">Reports</h1>
+        <p class="text-sm text-stone-500 mt-1">Transcripts, gradebooks, and a live SQL console</p>
+      </div>
+
+      <div class="flex gap-1 mb-5 border-b border-white/[0.06]">
+        ${this._tab('transcript', 'Student transcript', tab)}
+        ${this._tab('gradebook',  'Course gradebook',   tab)}
+        ${this._tab('sql',        'SQL console',        tab)}
+      </div>
+
+      ${tab === 'transcript' ? `
+        <div class="mb-5">
+          <select id="reportsStudent" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            ${students.map(s => `<option value="${s.id}" ${s.id == this._reportsStudent ? 'selected' : ''}>${UI.escape(s.student_id)} — ${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</option>`).join('')}
+          </select>
+        </div>
+      ` : ''}
+
+      ${tab === 'gradebook' ? `
+        <div class="mb-5">
+          <select id="reportsCourse" class="bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            ${courses.map(c => `<option value="${c.id}" ${c.id == this._reportsCourse ? 'selected' : ''}>${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
+          </select>
+        </div>
+      ` : ''}
+
+      <div class="surface rounded-xl p-6">${content}</div>
+    `;
+  },
+
+  _tab(id, label, active) {
+    const isActive = id === active;
+    return `<button data-reports-tab="${id}" class="px-4 py-2.5 text-[13px] font-medium transition-colors border-b-2 ${
+      isActive ? 'text-stone-100 border-accent' : 'text-stone-500 border-transparent hover:text-stone-300'
+    }">${UI.escape(label)}</button>`;
+  }
+};
+
+/* ============================================================================
+   ROUTER + APP
+   ============================================================================ */
+
+const App = {
+
+  currentView: 'dashboard',
+
+  render() {
+    // Sidebar nav
+    document.getElementById('nav').innerHTML = NAV.map(item => `
+      <a href="#" data-view="${item.id}" class="nav-item flex items-center gap-3 px-5 py-2.5 text-[13px] text-stone-400 ${this.currentView === item.id ? 'active' : ''}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
+        ${UI.escape(item.label)}
+      </a>
+    `).join('');
+
+    // User card
+    const user = Auth.current;
+    document.getElementById('userCard').innerHTML = `
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-[#8b7cff] flex items-center justify-center text-black font-semibold text-xs flex-shrink-0">
+          ${UI.escape(user.name[0])}
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[12px] text-stone-200 font-medium truncate">${UI.escape(user.name)}</div>
+          <div class="text-[10px] text-stone-500 font-mono truncate">@${UI.escape(user.username)}</div>
+        </div>
+      </div>
+      <div class="mt-2.5 flex items-center justify-between">
+        ${UI.roleBadge(user.role)}
+        <button id="logoutBtn" class="text-[11px] text-stone-500 hover:text-stone-100 transition-colors">Sign out</button>
+      </div>
+    `;
+
+    // Breadcrumb
+    const current = NAV.find(n => n.id === this.currentView);
+    document.getElementById('breadcrumb').textContent = current ? current.label : '';
+
+    // Main content
+    const main = document.getElementById('main');
+    main.innerHTML = Views[this.currentView] ? Views[this.currentView]() : UI.empty('Not found');
+
+    // Rebind events
+    this.bind();
+  },
+
+  navigate(view) {
+    if (!Views[view]) return;
+    this.currentView = view;
+    this.render();
+  },
+
+  bind() {
+    // Nav
+    document.querySelectorAll('[data-view]').forEach(el => {
+      el.addEventListener('click', e => { e.preventDefault(); this.navigate(el.dataset.view); });
+    });
+
+    // Logout
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+      Auth.logout();
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('loginScreen').classList.add('flex');
+    });
+
+    // Students search + filter
+    document.getElementById('studentSearch')?.addEventListener('input', e => {
+      Views._studentsSearch = e.target.value;
+      clearTimeout(this._searchTimer);
+      this._searchTimer = setTimeout(() => this.render(), 200);
+    });
+    document.getElementById('studentDept')?.addEventListener('change', e => {
+      Views._studentsDept = e.target.value;
+      this.render();
+    });
+
+    // New student
+    document.getElementById('newStudentBtn')?.addEventListener('click', () => this.studentForm());
+    document.querySelectorAll('[data-edit-student]').forEach(el => {
+      el.addEventListener('click', () => this.studentForm(parseInt(el.dataset.editStudent, 10)));
+    });
+    document.querySelectorAll('[data-del-student]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.delStudent, 10);
+        const s = DB.one('SELECT * FROM students WHERE id = ?', [id]);
+        UI.confirm(`Delete ${s.first_name} ${s.last_name}? This will also remove their enrollments and attendance.`, () => {
+          DB.run('DELETE FROM students WHERE id = ?', [id]);
+          UI.toast('Student deleted', 'success');
+          this.render();
+        });
+      });
+    });
+
+    // Courses
+    document.getElementById('newCourseBtn')?.addEventListener('click', () => this.courseForm());
+    document.querySelectorAll('[data-edit-course]').forEach(el => {
+      el.addEventListener('click', () => this.courseForm(parseInt(el.dataset.editCourse, 10)));
+    });
+    document.querySelectorAll('[data-del-course]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.delCourse, 10);
+        const c = DB.one('SELECT * FROM courses WHERE id = ?', [id]);
+        UI.confirm(`Delete "${c.title}"? This will remove all enrollments in this course.`, () => {
+          DB.run('DELETE FROM courses WHERE id = ?', [id]);
+          UI.toast('Course deleted', 'success');
+          this.render();
+        });
+      });
+    });
+
+    // Enrollments
+    document.getElementById('newEnrollBtn')?.addEventListener('click', () => this.enrollmentForm());
+    document.querySelectorAll('[data-grade-enroll]').forEach(el => {
+      el.addEventListener('click', () => this.gradeForm(parseInt(el.dataset.gradeEnroll, 10)));
+    });
+    document.querySelectorAll('[data-del-enroll]').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.dataset.delEnroll, 10);
+        UI.confirm('Remove this enrollment?', () => {
+          DB.run('DELETE FROM enrollments WHERE id = ?', [id]);
+          UI.toast('Enrollment removed', 'success');
+          this.render();
+        });
+      });
+    });
+
+    // Attendance
+    document.getElementById('attCourseSelect')?.addEventListener('change', e => {
+      Views._attCourse = parseInt(e.target.value, 10);
+      this.render();
+    });
+    document.getElementById('attDateInput')?.addEventListener('change', e => {
+      Views._attDate = e.target.value;
+      this.render();
+    });
+    document.querySelectorAll('[data-att]').forEach(el => {
+      el.addEventListener('click', () => {
+        const [eid, status] = el.dataset.att.split('|');
+        const date = Views._attDate || new Date().toISOString().slice(0, 10);
+        DB.run(
+          'INSERT OR REPLACE INTO attendance (enrollment_id, date, status) VALUES (?, ?, ?)',
+          [parseInt(eid, 10), date, status]
+        );
+        UI.toast(`Marked ${status}`, 'success');
+        this.render();
+      });
+    });
+
+    // Reports
+    document.querySelectorAll('[data-reports-tab]').forEach(el => {
+      el.addEventListener('click', () => {
+        Views._reportsTab = el.dataset.reportsTab;
+        this.render();
+      });
+    });
+    document.getElementById('reportsStudent')?.addEventListener('change', e => {
+      Views._reportsStudent = parseInt(e.target.value, 10);
+      this.render();
+    });
+    document.getElementById('reportsCourse')?.addEventListener('change', e => {
+      Views._reportsCourse = parseInt(e.target.value, 10);
+      this.render();
+    });
+    document.getElementById('sqlRun')?.addEventListener('click', () => {
+      const sql = document.getElementById('sqlConsole').value.trim();
+      if (!sql) return;
+      Views._sqlInput = sql;
+      try {
+        const sets = DB.exec(sql);
+        Views._sqlResult = {
+          sets: sets.map(s => ({ columns: s.columns, values: s.values })),
+          error: null
+        };
+        if (sets.length === 0) UI.toast('Query executed — no rows', 'success');
+        else UI.toast(`Returned ${sets[0].values.length} row${sets[0].values.length === 1 ? '' : 's'}`, 'success');
+      } catch (err) {
+        Views._sqlResult = { sets: [], error: err.message };
+        UI.toast('SQL error', 'error');
+      }
+      this.render();
+    });
+  },
+
+  /* ---------------- Student form ---------------- */
+  studentForm(id) {
+    const editing = id !== undefined;
+    const s = editing ? DB.one('SELECT * FROM students WHERE id = ?', [id]) : null;
+    const departments = DB.all('SELECT * FROM departments ORDER BY name');
+
+    UI.modal({
+      title: editing ? 'Edit student' : 'New student',
+      body: `
+        <form id="studentForm" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Student ID</label>
+              <input name="student_id" required value="${UI.escape(s?.student_id || '')}" placeholder="STU-2025-011"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Status</label>
+              <select name="status" class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+                ${['active', 'graduated', 'suspended'].map(v => `<option value="${v}" ${s?.status === v ? 'selected' : ''}>${v}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">First name</label>
+              <input name="first_name" required value="${UI.escape(s?.first_name || '')}"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Last name</label>
+              <input name="last_name" required value="${UI.escape(s?.last_name || '')}"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Email</label>
+            <input name="email" type="email" required value="${UI.escape(s?.email || '')}"
+              class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Phone</label>
+              <input name="phone" value="${UI.escape(s?.phone || '')}" placeholder="+251…"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Year</label>
+              <input name="year" type="number" min="1" max="5" required value="${s?.year || 1}"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Department</label>
+            <select name="department_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              ${departments.map(d => `<option value="${d.id}" ${s?.department_id === d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
+            </select>
+          </div>
+        </form>
+      `,
+      footer: `
+        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
+        <button id="studentSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">${editing ? 'Save changes' : 'Create student'}</button>
+      `,
+      onMount(root) {
+        root.querySelector('#studentSave').addEventListener('click', () => {
+          const fd = new FormData(root.querySelector('#studentForm'));
+          const data = Object.fromEntries(fd);
+          data.department_id = parseInt(data.department_id, 10);
+          data.year = parseInt(data.year, 10);
+          if (!editing) data.enrolled_date = new Date().toISOString().slice(0, 10);
+
+          try {
+            if (editing) {
+              DB.run(
+                `UPDATE students SET student_id=?, first_name=?, last_name=?, email=?, phone=?, department_id=?, year=?, status=? WHERE id=?`,
+                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.status, id]
+              );
+              UI.toast('Student updated', 'success');
+            } else {
+              DB.run(
+                `INSERT INTO students (student_id, first_name, last_name, email, phone, department_id, year, enrolled_date, status) VALUES (?,?,?,?,?,?,?,?,?)`,
+                [data.student_id, data.first_name, data.last_name, data.email, data.phone, data.department_id, data.year, data.enrolled_date, data.status]
+              );
+              UI.toast('Student created', 'success');
+            }
+            UI.closeModal();
+            App.render();
+          } catch (err) {
+            UI.toast(err.message.includes('UNIQUE') ? 'Student ID or email already exists' : err.message, 'error');
+          }
+        });
+      }
+    });
+  },
+
+  /* ---------------- Course form ---------------- */
+  courseForm(id) {
+    const editing = id !== undefined;
+    const c = editing ? DB.one('SELECT * FROM courses WHERE id = ?', [id]) : null;
+    const departments = DB.all('SELECT * FROM departments ORDER BY name');
+
+    UI.modal({
+      title: editing ? 'Edit course' : 'New course',
+      body: `
+        <form id="courseForm" class="space-y-4">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course code</label>
+              <input name="code" required value="${UI.escape(c?.code || '')}" placeholder="WDD-XXX"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Credits</label>
+              <input name="credits" type="number" min="1" max="6" required value="${c?.credits || 3}"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Title</label>
+            <input name="title" required value="${UI.escape(c?.title || '')}"
+              class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Department</label>
+              <select name="department_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+                ${departments.map(d => `<option value="${d.id}" ${c?.department_id === d.id ? 'selected' : ''}>${UI.escape(d.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Semester</label>
+              <input name="semester" required value="${UI.escape(c?.semester || '')}" placeholder="2025-Fall"
+                class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none font-mono">
+            </div>
+          </div>
+        </form>
+      `,
+      footer: `
+        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
+        <button id="courseSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">${editing ? 'Save changes' : 'Create course'}</button>
+      `,
+      onMount(root) {
+        root.querySelector('#courseSave').addEventListener('click', () => {
+          const fd = new FormData(root.querySelector('#courseForm'));
+          const data = Object.fromEntries(fd);
+          data.department_id = parseInt(data.department_id, 10);
+          data.credits = parseInt(data.credits, 10);
+          try {
+            if (editing) {
+              DB.run(
+                `UPDATE courses SET code=?, title=?, department_id=?, credits=?, semester=? WHERE id=?`,
+                [data.code, data.title, data.department_id, data.credits, data.semester, id]
+              );
+              UI.toast('Course updated', 'success');
+            } else {
+              DB.run(
+                `INSERT INTO courses (code, title, department_id, credits, semester) VALUES (?,?,?,?,?)`,
+                [data.code, data.title, data.department_id, data.credits, data.semester]
+              );
+              UI.toast('Course created', 'success');
+            }
+            UI.closeModal();
+            App.render();
+          } catch (err) {
+            UI.toast(err.message.includes('UNIQUE') ? 'Course code already exists' : err.message, 'error');
+          }
+        });
+      }
+    });
+  },
+
+  /* ---------------- Enrollment form ---------------- */
+  enrollmentForm() {
+    const students = DB.all('SELECT id, student_id, first_name, last_name FROM students WHERE status = "active" ORDER BY last_name');
+    const courses = DB.all('SELECT id, code, title FROM courses ORDER BY code');
+
+    UI.modal({
+      title: 'Enroll student in a course',
+      body: `
+        <form id="enrollForm" class="space-y-4">
+          <div>
+            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Student</label>
+            <select name="student_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              ${students.map(s => `<option value="${s.id}">${UI.escape(s.student_id)} — ${UI.escape(s.first_name)} ${UI.escape(s.last_name)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Course</label>
+            <select name="course_id" required class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-stone-100 outline-none">
+              ${courses.map(c => `<option value="${c.id}">${UI.escape(c.code)} — ${UI.escape(c.title)}</option>`).join('')}
+            </select>
+          </div>
+        </form>
+      `,
+      footer: `
+        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
+        <button id="enrollSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">Enroll</button>
+      `,
+      onMount(root) {
+        root.querySelector('#enrollSave').addEventListener('click', () => {
+          const fd = new FormData(root.querySelector('#enrollForm'));
+          const student_id = parseInt(fd.get('student_id'), 10);
+          const course_id = parseInt(fd.get('course_id'), 10);
+          try {
+            DB.run(
+              `INSERT INTO enrollments (student_id, course_id, enrolled_at) VALUES (?,?,?)`,
+              [student_id, course_id, new Date().toISOString().slice(0, 10)]
+            );
+            UI.toast('Student enrolled', 'success');
+            UI.closeModal();
+            App.render();
+          } catch (err) {
+            UI.toast(err.message.includes('UNIQUE') ? 'This student is already enrolled in that course' : err.message, 'error');
+          }
+        });
+      }
+    });
+  },
+
+  /* ---------------- Grade form ---------------- */
+  gradeForm(id) {
+    const e = DB.one(`
+      SELECT e.*, s.first_name, s.last_name, c.code, c.title
+      FROM enrollments e
+      JOIN students s ON e.student_id = s.id
+      JOIN courses c ON e.course_id = c.id
+      WHERE e.id = ?`, [id]);
+    if (!e) return;
+
+    UI.modal({
+      title: 'Enter grade',
+      body: `
+        <div class="mb-4 text-sm text-stone-400">
+          <div class="text-stone-100 font-medium">${UI.escape(e.first_name)} ${UI.escape(e.last_name)}</div>
+          <div class="text-xs font-mono text-stone-500 mt-1">${UI.escape(e.code)} — ${UI.escape(e.title)}</div>
+        </div>
+        <form id="gradeForm">
+          <label class="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">Grade (0 – 100)</label>
+          <input name="grade" type="number" min="0" max="100" step="0.5" value="${e.grade ?? ''}" required
+            class="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-stone-100 outline-none font-mono">
+          <p class="text-[11px] text-stone-500 mt-2">Letter grade is computed automatically: A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60, F below.</p>
+        </form>
+      `,
+      footer: `
+        <button data-close class="px-4 py-2 text-sm text-stone-300 hover:text-white transition-colors">Cancel</button>
+        <button id="gradeSave" class="px-4 py-2 text-sm font-medium bg-white hover:bg-stone-200 text-black rounded-lg transition-colors">Save grade</button>
+      `,
+      onMount(root) {
+        root.querySelector('#gradeSave').addEventListener('click', () => {
+          const val = parseFloat(root.querySelector('[name=grade]').value);
+          if (isNaN(val) || val < 0 || val > 100) {
+            UI.toast('Grade must be between 0 and 100', 'error');
+            return;
+          }
+          DB.run(
+            'UPDATE enrollments SET grade = ?, letter_grade = ? WHERE id = ?',
+            [val, DB.letterGrade(val), id]
+          );
+          UI.toast('Grade saved', 'success');
+          UI.closeModal();
+          App.render();
+        });
+      }
+    });
+  }
+};
+
+/* ============================================================================
+   BOOT
+   ============================================================================ */
+
+(async function boot() {
+  try {
+    await DB.init();
+
+    // Login handlers
+    document.querySelectorAll('[data-fill]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [u, p] = btn.dataset.fill.split(':');
+        document.getElementById('loginUser').value = u;
+        document.getElementById('loginPass').value = p;
+      });
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value;
+      const errEl = document.getElementById('loginError');
+      errEl.classList.add('hidden');
+
+      const res = await Auth.login(user, pass);
+      if (!res.ok) {
+        errEl.textContent = res.error;
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('flex');
+      document.getElementById('app').classList.remove('hidden');
+      App.render();
+      UI.toast(`Signed in as ${Auth.current.name}`, 'success');
+    });
+
+    // Reset database button
+    document.getElementById('resetDbBtn').addEventListener('click', () => {
+      if (!Auth.can('db.reset')) { UI.toast('Only administrators can reset the database', 'error'); return; }
+      UI.confirm('Reset the database? All changes will be lost and seed data will be restored.', () => {
+        DB.reset();
+        UI.toast('Database reset to seed data', 'success');
+        App.render();
+      });
+    });
+
+    // Show login
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('loginScreen').classList.add('flex');
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loading').innerHTML = `
+      <div class="text-center max-w-md">
+        <div class="text-red-400 text-sm font-mono">Failed to initialize database</div>
+        <div class="text-xs text-stone-500 mt-2">${UI.escape(err.message)}</div>
+      </div>
+    `;
+  }
+})();
+</script>
+
+</body>
+</html>
