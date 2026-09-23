@@ -2,7 +2,7 @@
 
 A web-based student records management platform built with **real SQL running in the browser** — no backend, no setup, no hosting costs.
 
-**[View live demo →](#)** *(replace with your GitHub Pages URL after deployment)*
+https://samuel1tadele-hash.github.io/student-records-system/
 
 ---
 
